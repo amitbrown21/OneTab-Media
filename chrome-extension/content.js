@@ -1,5 +1,5 @@
 /**
- * Media Tab Manager - Content Script
+ * OneTab Media - Content Script
  * Detects media playback events and communicates with background script
  */
 
@@ -29,7 +29,7 @@
   // Debounce timer for media state changes
   let debounceTimer = null;
   
-  console.log('Media Tab Manager: Content script loaded on', window.location.href);
+      console.log('OneTab Media: Content script loaded on', window.location.href);
   
   /**
    * Initialize content script
@@ -146,7 +146,7 @@
       handleMediaPlay(element);
     }
     
-    console.log('Media Tab Manager: Attached listeners to', element.tagName, element.src || element.currentSrc);
+            console.log('OneTab Media: Attached listeners to', element.tagName, element.src || element.currentSrc);
   }
   
   /**
@@ -169,7 +169,7 @@
       muted: element.muted
     };
     
-    console.log('Media Tab Manager: Media started playing', mediaInfo);
+          console.log('OneTab Media: Media started playing', mediaInfo);
     
     // Notify background script
     sendMessage({
@@ -188,7 +188,7 @@
     elementInfo.isPlaying = false;
     activeMediaElements.delete(element);
     
-    console.log('Media Tab Manager: Media paused');
+          console.log('OneTab Media: Media paused');
     
     // Only notify if there are no other playing media elements
     if (activeMediaElements.size === 0) {
@@ -208,7 +208,7 @@
     elementInfo.isPlaying = false;
     activeMediaElements.delete(element);
     
-    console.log('Media Tab Manager: Media ended');
+          console.log('OneTab Media: Media ended');
     
     // Only notify if there are no other playing media elements
     if (activeMediaElements.size === 0) {
@@ -294,7 +294,7 @@
    * Pause all media elements in this tab
    */
   function pauseAllMedia() {
-    console.log('Media Tab Manager: Pausing all media in tab');
+          console.log('OneTab Media: Pausing all media in tab');
     
     // Pause HTML5 media elements
     activeMediaElements.forEach(element => {
@@ -358,7 +358,7 @@
             const text = button.textContent || button.getAttribute('aria-label') || button.getAttribute('title') || '';
             if (text.toLowerCase().includes('pause')) {
               button.click();
-              console.log('Media Tab Manager: Clicked pause button via selector', selector);
+              console.log('OneTab Media: Clicked pause button via selector', selector);
             }
           }
         });
@@ -380,7 +380,7 @@
       const url = location.href;
       if (url !== lastUrl) {
         lastUrl = url;
-        console.log('Media Tab Manager: Page navigation detected, re-scanning for media');
+        console.log('OneTab Media: Page navigation detected, re-scanning for media');
         setTimeout(() => {
           detectExistingMedia();
         }, 1000);

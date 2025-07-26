@@ -1,4 +1,4 @@
-# Media Tab Manager - Firefox Extension
+# OneTab Media - Firefox Extension
 
 A Firefox extension that ensures only one tab can play audio/video at a time. When you start playing media in a new tab, it automatically pauses media in all other tabs.
 
@@ -28,7 +28,7 @@ A Firefox extension that ensures only one tab can play audio/video at a time. Wh
    - Click "Open"
 
 3. **Verify Installation**:
-   - Look for the Media Tab Manager icon in your Firefox toolbar
+   - Look for the OneTab Media icon in your Firefox toolbar
    - Click the icon to open the popup interface
    - The extension will be listed in the temporary extensions section
 
@@ -72,7 +72,7 @@ firefox-extension/
 - **Content Script**: Runs on all HTTP/HTTPS pages
 - **Background**: Non-persistent background script
 - **Storage**: Uses Firefox's local storage for settings
-- **Extension ID**: media-tab-manager@example.com
+   - **Extension ID**: onetab-media@example.com
 
 ## Supported Media Types
 
@@ -122,14 +122,14 @@ To modify this extension:
 
 1. Make changes to the files in the `firefox-extension` folder
 2. Go to `about:debugging#/runtime/this-firefox`
-3. Click "Reload" next to "Media Tab Manager"
+ 3. Click "Reload" next to "OneTab Media"
 4. Test your changes
 
 ## Building for Production
 
 To create a signed extension for Firefox:
 
-1. Package the extension: `zip -r media-tab-manager.zip *`
+ 1. Package the extension: `zip -r onetab-media.zip *`
 2. Submit to [Firefox Add-ons](https://addons.mozilla.org/developers/)
 3. Wait for review and signing process
 

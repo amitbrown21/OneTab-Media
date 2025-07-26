@@ -1,4 +1,4 @@
-# Media Tab Manager Extension
+# OneTab Media Extension
 
 A browser extension that ensures only one tab can play audio/video at a time. When you start playing media in a new tab, it automatically pauses media in all other tabs.
 
@@ -15,16 +15,17 @@ Each folder contains a complete, ready-to-install extension with its own README 
 
 - 🎵 **Automatic Media Detection** - Detects when media starts playing in any tab
 - ⏸️ **Smart Pausing** - Automatically pauses media in other tabs when new media begins
-- ▶️ **Individual Controls** - Play/pause buttons for each tab with media
+- ⏸️ **Individual Controls** - Pause buttons for each tab with media
 - 🎛️ **Modern Interface** - Clean, modern popup to see and control all active media
 - 🔧 **Extension Toggle** - Master switch to enable/disable the entire functionality
 - 💾 **Persistent Settings** - Your preferences are saved across browser sessions
 - 🌐 **Cross-Browser** - Separate optimized versions for Chrome and Firefox
+- ☕ **Developer Support** - Easy way to support the developer with built-in link
 
 ## 📁 Project Structure
 
 ```
-Media Tab Manager/
+OneTab Media/
 ├── chrome-extension/          # Complete Chrome extension
 │   ├── manifest.json         # Chrome Manifest V3
 │   ├── background.js         # Service worker
@@ -73,7 +74,7 @@ Media Tab Manager/
 
 - **Toggle Switch**: Enable/disable the extension with a beautiful animated toggle
 - **Real-time Status**: Live status indicators showing which tabs are playing/paused
-- **Individual Controls**: Play/pause buttons for each tab
+- **Individual Controls**: Pause buttons for currently playing tabs
 - **Tab Switching**: Click any tab to switch to it instantly
 - **Modern Design**: Clean, responsive interface with smooth animations
 

@@ -1,10 +1,10 @@
-# Technical Architecture - Media Tab Manager
+# Technical Architecture - OneTab Media
 
-This document explains the technical architecture and implementation details of the Media Tab Manager extension.
+This document explains the technical architecture and implementation details of the OneTab Media extension.
 
 ## Overview
 
-The Media Tab Manager extension uses a distributed architecture with three main components:
+The OneTab Media extension uses a distributed architecture with three main components:
 
 1. **Background Script** - Central coordinator and state manager
 2. **Content Scripts** - Media detection and control in each tab
@@ -25,7 +25,7 @@ The Media Tab Manager extension uses a distributed architecture with three main 
 
 ## Component Details
 
-### Background Script (`src/common/background.js`)
+### Background Script (`background.js`)
 
 **Purpose**: Acts as the central coordinator for all media-related activities across tabs.
 
@@ -56,8 +56,10 @@ currentPlayingTab: number | null
 - `MEDIA_ENDED` - When media ends in any tab
 - `GET_ACTIVE_TABS` - For popup to get current state
 - `PAUSE_TAB` - Command to pause specific tab
+- `EXTENSION_TOGGLE` - Toggle extension on/off state
+- `MEDIA_STATE_CHANGED` - Notify popup of state changes
 
-### Content Script (`src/common/content.js`)
+### Content Script (`content.js`)
 
 **Purpose**: Injected into every webpage to detect and control media playback.
 
@@ -98,7 +100,7 @@ currentPlayingTab: number | null
 2. **Web Audio Control**: Suspend AudioContext when possible
 3. **UI Fallback**: Click pause buttons using common selectors
 
-### Popup Interface (`src/common/popup/`)
+### Popup Interface (`popup/`)
 
 **Purpose**: Provides user interface for monitoring and controlling media tabs.
 
@@ -112,7 +114,9 @@ currentPlayingTab: number | null
 - List of all active media tabs
 - Individual tab controls (pause, switch)
 - Bulk operations (pause all)
-- Auto-refresh every 2 seconds
+- Event-driven updates (no polling)
+- Extension enable/disable toggle
+- Developer support link
 
 ## Communication Flow
 

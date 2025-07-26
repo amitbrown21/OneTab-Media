@@ -1,4 +1,4 @@
-# Media Tab Manager - Chrome Extension
+# OneTab Media - Chrome Extension
 
 A Chrome extension that ensures only one tab can play audio/video at a time. When you start playing media in a new tab, it automatically pauses media in all other tabs.
 
@@ -26,7 +26,7 @@ A Chrome extension that ensures only one tab can play audio/video at a time. Whe
    - The extension should now appear in your extensions list
 
 3. **Verify Installation**:
-   - Look for the Media Tab Manager icon in your Chrome toolbar
+   - Look for the OneTab Media icon in your Chrome toolbar
    - Click the icon to open the popup interface
 
 ## Usage
@@ -99,7 +99,7 @@ To modify this extension:
 
 1. Make changes to the files in the `chrome-extension` folder
 2. Go to `chrome://extensions/`
-3. Click the refresh button next to "Media Tab Manager"
+ 3. Click the refresh button next to "OneTab Media"
 4. Test your changes
 
 ## Privacy

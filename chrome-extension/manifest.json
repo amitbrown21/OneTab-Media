@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Media Tab Manager",
+  "name": "OneTab Media",
   "version": "1.0.0",
   "description": "Ensures only one tab can play audio/video at a time by automatically pausing media in other tabs",
   
@@ -30,7 +30,7 @@
   
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Media Tab Manager",
+    "default_title": "OneTab Media",
     "default_icon": {
       "16": "icons/newIcon.png",
       "48": "icons/newIcon.png",

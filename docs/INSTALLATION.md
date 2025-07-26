@@ -1,6 +1,6 @@
-# Installation Guide - Media Tab Manager
+# Installation Guide - OneTab Media
 
-This guide will help you install the Media Tab Manager extension in both Chrome and Firefox browsers.
+This guide will help you install the OneTab Media extension in both Chrome and Firefox browsers.
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ Before installing, ensure you have:
    - The extension should now appear in your extensions list
 
 3. **Verify Installation**
-   - Look for the Media Tab Manager icon in your Chrome toolbar
+   - Look for the OneTab Media icon in your Chrome toolbar
    - Click the icon to open the popup interface
    - Check that the extension badge shows the correct status
 
@@ -134,7 +134,7 @@ Before the extension works properly, you need to create icon files:
 
 To enable verbose logging:
 
-1. **Chrome**: Open Chrome DevTools → Console, filter by "Media Tab Manager"
+1. **Chrome**: Open Chrome DevTools → Console, filter by "OneTab Media"
 2. **Firefox**: Open Browser Console (Ctrl+Shift+J), filter by extension messages
 
 ### Permission Issues
@@ -163,12 +163,12 @@ If the extension can't access certain sites:
 
 ### Chrome
 1. Go to `chrome://extensions/`
-2. Find Media Tab Manager
+2. Find OneTab Media
 3. Click "Remove"
 
 ### Firefox
 1. Go to `about:addons`
-2. Find Media Tab Manager
+2. Find OneTab Media
 3. Click "Remove"
 
 ## Support

@@ -1,5 +1,5 @@
 /**
- * Media Tab Manager - Modern Popup Styles
+ * OneTab Media - Modern Popup Styles
  * Clean, modern interface for the extension popup
  */
 
@@ -443,10 +443,55 @@ input:checked + .toggle-slider:before {
   text-align: center;
 }
 
+.footer-info {
+  margin-bottom: 12px;
+}
+
 .footer-info small {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
+}
+
+.support-section {
+  display: flex;
+  justify-content: center;
+}
+
+.support-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(255, 107, 53, 0.25);
+  border: none;
+  cursor: pointer;
+}
+
+.support-button:hover {
+  background: linear-gradient(135deg, #FF5722 0%, #FF7043 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.35);
+}
+
+.support-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+}
+
+.support-icon {
+  font-size: 14px;
+}
+
+.support-text {
+  font-size: 12px;
 }
 
 /* Scrollbar */

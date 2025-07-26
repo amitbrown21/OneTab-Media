@@ -1,5 +1,5 @@
 /**
- * Media Tab Manager - Background Script
+ * OneTab Media - Background Script
  * Manages cross-tab communication and media playback coordination
  */
 
@@ -22,7 +22,7 @@ const browserAPI = (function() {
  * Initialize extension when background script starts
  */
 function initializeExtension() {
-  console.log('Media Tab Manager: Background script initialized');
+  console.log('OneTab Media: Background script initialized');
   
   // Clear any existing state
   activeMediaTabs.clear();

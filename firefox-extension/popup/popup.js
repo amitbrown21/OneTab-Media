@@ -1,5 +1,5 @@
 /**
- * Media Tab Manager - Popup Script
+ * OneTab Media - Popup Script
  * Handles popup interface logic and communication with background script
  */
 
