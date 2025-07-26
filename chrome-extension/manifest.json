@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Media Tab Manager",
+  "version": "1.0.0",
+  "description": "Ensures only one tab can play audio/video at a time by automatically pausing media in other tabs",
+  
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "storage"
+  ],
+  
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Media Tab Manager",
+    "default_icon": {
+      "16": "icons/newIcon.png",
+      "48": "icons/newIcon.png",
+      "128": "icons/newIcon.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/newIcon.png",
+    "48": "icons/newIcon.png",
+    "128": "icons/newIcon.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["content.js"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ]
+} 

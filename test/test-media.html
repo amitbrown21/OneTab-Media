@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Tab Manager - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        video, audio {
+            width: 100%;
+            max-width: 500px;
+            margin: 10px 0;
+        }
+        
+        .controls {
+            margin: 15px 0;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .web-audio-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        #oscilloscope {
+            width: 100%;
+            height: 100px;
+            background: #000;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Media Tab Manager Test Page</h1>
+    <p>This page contains various media elements to test the Media Tab Manager extension functionality.</p>
+    
+    <div class="test-section">
+        <h2>📹 HTML5 Video Test</h2>
+        <p>Test with sample video content (you can replace with your own video file):</p>
+        <video controls id="testVideo">
+            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <div class="controls">
+            <button onclick="playVideo()">▶️ Play Video</button>
+            <button onclick="pauseVideo()">⏸️ Pause Video</button>
+            <button onclick="muteVideo()">🔇 Toggle Mute</button>
+        </div>
+        
+        <div class="status" id="videoStatus">
+            Status: Ready to play
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎵 HTML5 Audio Test</h2>
+        <p>Test with sample audio content:</p>
+        <audio controls id="testAudio">
+            <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
+            <source src="https://www.w3schools.com/html/horse.ogg" type="audio/ogg">
+            <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <div class="controls">
+            <button onclick="playAudio()">▶️ Play Audio</button>
+            <button onclick="pauseAudio()">⏸️ Pause Audio</button>
+            <button onclick="muteAudio()">🔇 Toggle Mute</button>
+        </div>
+        
+        <div class="status" id="audioStatus">
+            Status: Ready to play
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎛️ Web Audio API Test</h2>
+        <p>Test with Web Audio API generated sounds:</p>
+        
+        <canvas id="oscilloscope" width="800" height="100"></canvas>
+        
+        <div class="web-audio-controls">
+            <button onclick="playTone(440)" id="playToneBtn">🎵 Play 440Hz Tone</button>
+            <button onclick="playTone(880)">🎵 Play 880Hz Tone</button>
+            <button onclick="playNoise()">📢 Play White Noise</button>
+            <button onclick="stopWebAudio()" id="stopBtn" disabled>⏹️ Stop Audio</button>
+        </div>
+        
+        <div class="status" id="webAudioStatus">
+            Status: Web Audio API ready
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔄 Dynamic Media Test</h2>
+        <p>Test dynamic content loading (simulates SPA behavior):</p>
+        
+        <div id="dynamicContainer">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+        
+        <div class="controls">
+            <button onclick="addDynamicVideo()">➕ Add Dynamic Video</button>
+            <button onclick="addDynamicAudio()">➕ Add Dynamic Audio</button>
+            <button onclick="clearDynamic()">🗑️ Clear Dynamic Content</button>
+        </div>
+        
+        <div class="status" id="dynamicStatus">
+            Status: No dynamic content
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 Extension Test Instructions</h2>
+        <ol>
+            <li><strong>Install the Extension:</strong> Load the Media Tab Manager extension in your browser</li>
+            <li><strong>Test Basic Functionality:</strong>
+                <ul>
+                    <li>Start playing the video above</li>
+                    <li>Open this same page in a new tab</li>
+                    <li>Start playing the audio in the new tab</li>
+                    <li>The video in the first tab should automatically pause</li>
+                </ul>
+            </li>
+            <li><strong>Test Extension Popup:</strong>
+                <ul>
+                    <li>Click the extension icon in your browser toolbar</li>
+                    <li>Verify that active media tabs are shown</li>
+                    <li>Test the "Pause All" button</li>
+                    <li>Try switching between tabs using the popup</li>
+                </ul>
+            </li>
+            <li><strong>Test Web Audio API:</strong>
+                <ul>
+                    <li>Play one of the tone generators</li>
+                    <li>Switch to another tab and start different media</li>
+                    <li>The Web Audio should pause (this may vary by implementation)</li>
+                </ul>
+            </li>
+            <li><strong>Test Dynamic Content:</strong>
+                <ul>
+                    <li>Add dynamic media elements using the buttons above</li>
+                    <li>Verify that new elements are detected by the extension</li>
+                    <li>Test that they participate in the one-tab-playing policy</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <script>
+        // HTML5 Video Controls
+        const video = document.getElementById('testVideo');
+        const videoStatus = document.getElementById('videoStatus');
+        
+        function playVideo() {
+            video.play();
+        }
+        
+        function pauseVideo() {
+            video.pause();
+        }
+        
+        function muteVideo() {
+            video.muted = !video.muted;
+        }
+        
+        video.addEventListener('play', () => {
+            videoStatus.textContent = 'Status: Video playing';
+        });
+        
+        video.addEventListener('pause', () => {
+            videoStatus.textContent = 'Status: Video paused';
+        });
+        
+        video.addEventListener('ended', () => {
+            videoStatus.textContent = 'Status: Video ended';
+        });
+        
+        // HTML5 Audio Controls
+        const audio = document.getElementById('testAudio');
+        const audioStatus = document.getElementById('audioStatus');
+        
+        function playAudio() {
+            audio.play();
+        }
+        
+        function pauseAudio() {
+            audio.pause();
+        }
+        
+        function muteAudio() {
+            audio.muted = !audio.muted;
+        }
+        
+        audio.addEventListener('play', () => {
+            audioStatus.textContent = 'Status: Audio playing';
+        });
+        
+        audio.addEventListener('pause', () => {
+            audioStatus.textContent = 'Status: Audio paused';
+        });
+        
+        audio.addEventListener('ended', () => {
+            audioStatus.textContent = 'Status: Audio ended';
+        });
+        
+        // Web Audio API Controls
+        let audioContext = null;
+        let oscillator = null;
+        let gainNode = null;
+        let analyser = null;
+        let animationId = null;
+        
+        const webAudioStatus = document.getElementById('webAudioStatus');
+        const canvas = document.getElementById('oscilloscope');
+        const canvasCtx = canvas.getContext('2d');
+        
+        function initWebAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                analyser.connect(audioContext.destination);
+            }
+        }
+        
+        function playTone(frequency) {
+            stopWebAudio();
+            initWebAudio();
+            
+            oscillator = audioContext.createOscillator();
+            gainNode = audioContext.createGain();
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(analyser);
+            
+            oscillator.start();
+            
+            document.getElementById('playToneBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            webAudioStatus.textContent = `Status: Playing ${frequency}Hz tone`;
+            
+            drawOscilloscope();
+        }
+        
+        function playNoise() {
+            stopWebAudio();
+            initWebAudio();
+            
+            // Create white noise using ScriptProcessorNode
+            const bufferSize = 4096;
+            const noiseNode = audioContext.createScriptProcessor(bufferSize, 0, 1);
+            
+            noiseNode.onaudioprocess = function(e) {
+                const output = e.outputBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+            };
+            
+            gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            
+            noiseNode.connect(gainNode);
+            gainNode.connect(analyser);
+            
+            oscillator = noiseNode; // Store reference for cleanup
+            
+            document.getElementById('playToneBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            webAudioStatus.textContent = 'Status: Playing white noise';
+            
+            drawOscilloscope();
+        }
+        
+        function stopWebAudio() {
+            if (oscillator) {
+                try {
+                    if (oscillator.stop) {
+                        oscillator.stop();
+                    } else if (oscillator.disconnect) {
+                        oscillator.disconnect();
+                    }
+                } catch (e) {
+                    console.log('Error stopping oscillator:', e);
+                }
+                oscillator = null;
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            document.getElementById('playToneBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            webAudioStatus.textContent = 'Status: Web Audio stopped';
+            
+            // Clear canvas
+            canvasCtx.fillStyle = 'black';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function drawOscilloscope() {
+            if (!analyser) return;
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {
+                animationId = requestAnimationFrame(draw);
+                
+                analyser.getByteTimeDomainData(dataArray);
+                
+                canvasCtx.fillStyle = 'black';
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                canvasCtx.lineWidth = 2;
+                canvasCtx.strokeStyle = '#00ff00';
+                canvasCtx.beginPath();
+                
+                const sliceWidth = canvas.width / bufferLength;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+                    
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                canvasCtx.stroke();
+            }
+            
+            draw();
+        }
+        
+        // Dynamic Content Controls
+        const dynamicContainer = document.getElementById('dynamicContainer');
+        const dynamicStatus = document.getElementById('dynamicStatus');
+        let dynamicCounter = 0;
+        
+        function addDynamicVideo() {
+            dynamicCounter++;
+            const videoElement = document.createElement('video');
+            videoElement.controls = true;
+            videoElement.style.width = '100%';
+            videoElement.style.maxWidth = '400px';
+            videoElement.style.margin = '10px 0';
+            videoElement.id = `dynamicVideo${dynamicCounter}`;
+            
+            videoElement.innerHTML = `
+                <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4">
+                <source src="https://www.w3schools.com/html/movie.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            `;
+            
+            const label = document.createElement('p');
+            label.textContent = `Dynamic Video ${dynamicCounter}:`;
+            
+            dynamicContainer.appendChild(label);
+            dynamicContainer.appendChild(videoElement);
+            
+            dynamicStatus.textContent = `Status: Added dynamic video ${dynamicCounter}`;
+            
+            // Add event listeners
+            videoElement.addEventListener('play', () => {
+                console.log(`Dynamic video ${dynamicCounter} started playing`);
+            });
+        }
+        
+        function addDynamicAudio() {
+            dynamicCounter++;
+            const audioElement = document.createElement('audio');
+            audioElement.controls = true;
+            audioElement.style.width = '100%';
+            audioElement.style.maxWidth = '400px';
+            audioElement.style.margin = '10px 0';
+            audioElement.id = `dynamicAudio${dynamicCounter}`;
+            
+            audioElement.innerHTML = `
+                <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
+                <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            `;
+            
+            const label = document.createElement('p');
+            label.textContent = `Dynamic Audio ${dynamicCounter}:`;
+            
+            dynamicContainer.appendChild(label);
+            dynamicContainer.appendChild(audioElement);
+            
+            dynamicStatus.textContent = `Status: Added dynamic audio ${dynamicCounter}`;
+            
+            // Add event listeners
+            audioElement.addEventListener('play', () => {
+                console.log(`Dynamic audio ${dynamicCounter} started playing`);
+            });
+        }
+        
+        function clearDynamic() {
+            dynamicContainer.innerHTML = '';
+            dynamicCounter = 0;
+            dynamicStatus.textContent = 'Status: Cleared all dynamic content';
+        }
+        
+        // Console logging for debugging
+        console.log('Media Tab Manager Test Page loaded');
+        console.log('Use browser console to see extension debug messages');
+        
+        // Page visibility API for testing
+        document.addEventListener('visibilitychange', () => {
+            console.log('Page visibility changed:', document.hidden ? 'hidden' : 'visible');
+        });
+    </script>
+</body>
+</html> 

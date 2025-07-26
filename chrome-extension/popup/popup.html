@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Tab Manager</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <div class="header-content">
+        <div class="header-icon">🎵</div>
+        <div class="header-info">
+          <h1 class="header-title">Media Tab Manager</h1>
+          <div class="extension-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="extensionToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" id="toggleLabel">Enabled</span>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <div class="popup-content">
+      <div class="status-section">
+        <div class="status-indicator" id="statusIndicator">
+          <span class="status-dot" id="statusDot"></span>
+          <span class="status-text" id="statusText">No active media</span>
+        </div>
+      </div>
+      
+      <div class="tabs-section" id="tabsSection">
+        <h2 class="section-title">Active Media Tabs</h2>
+        <div class="tabs-list" id="tabsList">
+          <!-- Tabs will be populated by JavaScript -->
+        </div>
+        <div class="no-tabs-message" id="noTabsMessage">
+          <div class="no-tabs-icon">📱</div>
+          <p>No tabs are currently playing media</p>
+          <small>Start playing a video or audio in any tab to see it here</small>
+        </div>
+      </div>
+      
+      <div class="controls-section">
+        <button class="control-button primary" id="pauseAllButton" title="Pause all media">
+          <span class="button-icon">⏸️</span>
+          <span class="button-text">Pause All</span>
+        </button>
+        <button class="control-button secondary" id="refreshButton" title="Refresh tab list">
+          <span class="button-icon">🔄</span>
+          <span class="button-text">Refresh</span>
+        </button>
+      </div>
+    </div>
+    
+    <footer class="popup-footer">
+      <div class="footer-info">
+        <small id="footerStatus">Extension active on all tabs</small>
+      </div>
+    </footer>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 
