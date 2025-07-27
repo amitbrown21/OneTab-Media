@@ -97,12 +97,12 @@ async function initializeOptionsPage() {
 async function migrateFromLocalStorage() {
   try {
     // Check if we already have sync settings
-    const syncData = await browserAPI.storage.sync.get(Object.keys(defaultSettings));
+    const syncData = await browserAPI.storage.sync.get(Object.keys(defaultSettings)) || {};
     const hasSyncData = Object.keys(syncData).length > 0;
     
     if (!hasSyncData) {
       // Check if we have local storage data to migrate
-      const localData = await browserAPI.storage.local.get(Object.keys(defaultSettings));
+      const localData = await browserAPI.storage.local.get(Object.keys(defaultSettings)) || {};
       const hasLocalData = Object.keys(localData).length > 0;
       
       if (hasLocalData) {
@@ -121,7 +121,7 @@ async function migrateFromLocalStorage() {
  */
 async function ensureDefaultsSet() {
   try {
-    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings));
+    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings)) || {};
     
     // Check if this is a fresh install (no settings exist)
     const isFreshInstall = Object.keys(result).length === 0;
@@ -228,7 +228,7 @@ function setupEventListeners() {
 
 async function loadSettings() {
   try {
-    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings));
+    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings)) || {};
     currentSettings = { ...defaultSettings, ...result };
     
     // Load general settings
