@@ -1,6 +1,6 @@
 /**
- * OneTab Media - Popup Script
- * Handles popup interface logic and communication with background script
+ * UME - Ultimate Media Extention - Popup Script
+ * Handles the popup interface for managing media across browser tabs
  */
 
 (function() {

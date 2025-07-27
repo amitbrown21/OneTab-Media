@@ -1,6 +1,7 @@
 /* Modern Options Page Styling */
 :root {
   --primary-color: #007acc;
+  --primary-color-light: #4da6d9;
   --primary-hover: #0066b3;
   --secondary-color: #6c757d;
   --success-color: #28a745;
@@ -78,6 +79,13 @@ body {
 .header-icon {
   font-size: 40px;
   margin-right: var(--spacing-lg);
+}
+
+.header-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
 }
 
 .header-title {
@@ -243,6 +251,17 @@ body {
   opacity: 0;
   width: 0;
   height: 0;
+  position: absolute;
+  cursor: pointer;
+  pointer-events: none;
+}
+
+.toggle-switch input:focus {
+  outline: none;
+}
+
+.toggle-switch input:focus + .toggle-slider {
+  box-shadow: 0 0 0 2px var(--primary-color-light);
 }
 
 .toggle-slider {

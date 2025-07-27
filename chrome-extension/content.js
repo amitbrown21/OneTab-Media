@@ -1,7 +1,7 @@
 /**
- * OneTab Media - Content Script
- * Detects media playback events and communicates with background script
- * Enhanced with video speed control functionality
+ * UME - Ultimate Media Extention - Content Script
+ * Integrates media detection and speed control functionality into web pages
+ * Includes visual overlay controller and keyboard shortcuts
  */
 
 (function() {
@@ -53,6 +53,12 @@
    */
   class VideoController {
     constructor(video) {
+      // Additional safeguard: prevent duplicate controllers
+      if (video.vsc) {
+        console.warn('OneTab Media: VideoController already exists for this element, preventing duplicate');
+        return video.vsc;
+      }
+      
       this.video = video;
       this.element = video;
       this.isInitialized = false;
@@ -499,7 +505,7 @@
           if (element.vsc && typeof element.vsc.setSpeed === 'function') {
             element.vsc.setSpeed(fasterSpeed);
           } else {
-            setSpeed(element, fasterSpeed);
+          setSpeed(element, fasterSpeed);
           }
           break;
           
@@ -509,7 +515,7 @@
           if (element.vsc && typeof element.vsc.setSpeed === 'function') {
             element.vsc.setSpeed(slowerSpeed);
           } else {
-            setSpeed(element, slowerSpeed);
+          setSpeed(element, slowerSpeed);
           }
           break;
           
@@ -586,12 +592,20 @@
     // Detect existing media elements
     detectExistingMedia();
     
-    // Watch for new media elements
+    // Watch for new and removed media elements
     const mediaObserver = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
+        // Handle added nodes
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             checkForMediaElements(node);
+          }
+        });
+        
+        // Handle removed nodes
+        mutation.removedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            cleanupRemovedMediaElements(node);
           }
         });
       });
@@ -601,6 +615,52 @@
       childList: true,
       subtree: true
     });
+  }
+  
+  /**
+   * Clean up VideoControllers for removed media elements
+   */
+  function cleanupRemovedMediaElements(node) {
+    // Check if the removed node itself is a video element
+    if (node.tagName && node.tagName.toLowerCase() === 'video') {
+      cleanupMediaElement(node);
+    }
+    
+    // Check for video elements within the removed node
+    if (node.querySelectorAll) {
+      const videoElements = node.querySelectorAll('video');
+      videoElements.forEach(video => {
+        cleanupMediaElement(video);
+      });
+    }
+  }
+  
+  /**
+   * Clean up a single media element
+   */
+  function cleanupMediaElement(element) {
+    try {
+      // Remove VideoController if it exists
+      if (element.vsc && typeof element.vsc.remove === 'function') {
+        element.vsc.remove();
+        element.vsc = null;
+        console.log('OneTab Media: Cleaned up VideoController for removed element');
+      }
+      
+      // Remove from tracked elements
+      if (trackedElements.has(element)) {
+        trackedElements.delete(element);
+        console.log('OneTab Media: Removed element from tracking');
+      }
+      
+      // Remove from active elements
+      if (activeMediaElements.has(element)) {
+        activeMediaElements.delete(element);
+        console.log('OneTab Media: Removed element from active media');
+      }
+    } catch (error) {
+      console.warn('OneTab Media: Error cleaning up media element:', error);
+    }
   }
   
   /**
@@ -684,7 +744,7 @@
       handleMediaPlay(element);
     });
     
-    // Pause event  
+    // Pause event
     element.addEventListener('pause', () => {
       handleMediaPause(element);
     });
@@ -749,7 +809,7 @@
       if (element.vsc && typeof element.vsc.setSpeed === 'function') {
         element.vsc.setSpeed(targetSpeed);
       } else {
-        element.playbackRate = targetSpeed;
+      element.playbackRate = targetSpeed;
       }
       console.log('OneTab Media: Restored speed to', targetSpeed, 'for', src);
     }
@@ -862,10 +922,10 @@
       // Apply settings to existing video controllers
       activeMediaElements.forEach(element => {
         if (element.vsc && element.vsc.isInitialized) {
-          // Update controller opacity
+                            // Update controller opacity
           if (newSettings.controllerOpacity !== undefined) {
             try {
-              const controller = element.vsc.div;
+              const controller = element.vsc.controller;
               if (controller) {
                 controller.style.opacity = newSettings.controllerOpacity;
               }
@@ -877,12 +937,12 @@
           // Update visibility based on showController setting
           if (newSettings.showController !== undefined) {
             try {
-              const controller = element.vsc.div;
-              if (controller) {
+              const wrapper = element.vsc.div;
+              if (wrapper) {
                 if (newSettings.showController) {
-                  controller.classList.remove('vsc-hidden');
+                  wrapper.classList.remove('vsc-hidden');
                 } else {
-                  controller.classList.add('vsc-hidden');
+                  wrapper.classList.add('vsc-hidden');
                 }
               }
             } catch (error) {
@@ -909,7 +969,7 @@
       console.error('OneTab Media: Failed to apply settings update:', error);
     }
   }
-
+  
   /**
    * Set up message listener for commands from background script
    */
@@ -1064,12 +1124,39 @@
       const url = location.href;
       if (url !== lastUrl) {
         lastUrl = url;
-        console.log('OneTab Media: Page navigation detected, re-scanning for media');
+        console.log('OneTab Media: Page navigation detected, cleaning up and re-scanning for media');
+        
+        // Clean up all existing controllers before re-scanning
+        cleanupAllMediaElements();
+        
         setTimeout(() => {
           detectExistingMedia();
         }, 1000);
       }
     }).observe(document, { subtree: true, childList: true });
+  }
+  
+  /**
+   * Clean up all VideoControllers and tracked elements
+   */
+  function cleanupAllMediaElements() {
+    try {
+      // Clean up all VideoControllers
+      trackedElements.forEach((info, element) => {
+        if (element.vsc && typeof element.vsc.remove === 'function') {
+          element.vsc.remove();
+          element.vsc = null;
+        }
+      });
+      
+      // Clear all tracking data
+      trackedElements.clear();
+      activeMediaElements.clear();
+      
+      console.log('OneTab Media: Cleaned up all media elements and controllers');
+    } catch (error) {
+      console.warn('OneTab Media: Error during full cleanup:', error);
+    }
   }
   
   /**
@@ -1131,5 +1218,5 @@
     .catch(error => {
       console.error('OneTab Media: Error loading controller.css:', error);
     });
-    
+  
 })(); 

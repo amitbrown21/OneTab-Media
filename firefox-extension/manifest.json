@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "OneTab Media",
-  "version": "1.0",
-  "description": "Control media playback across all tabs with video speed controls",
+  "name": "UME - Ultimate Media Extention",
+  "version": "2.0.0",
+  "description": "UME - Ultimate Media Extention: Control media playback across browser tabs with video speed controls and keyboard shortcuts",
 
   "permissions": [
     "storage",

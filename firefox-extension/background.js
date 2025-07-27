@@ -1,6 +1,6 @@
 /**
- * OneTab Media - Background Script
- * Manages cross-tab communication and media playback coordination
+ * UME - Ultimate Media Extention - Background Script
+ * Manages extension state, settings, and communication between components
  */
 
 // Global state to track active media tabs
@@ -49,7 +49,8 @@ teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, '')
  * Initialize extension when background script starts
  */
 async function initializeExtension() {
-  console.log('OneTab Media: Background script initialized');
+  // Log startup
+  console.log('UME - Ultimate Media Extention: Background script started');
   
   // Clear any existing state
   activeMediaTabs.clear();
@@ -66,6 +67,9 @@ async function initializeExtension() {
   
   // Set up tab event listeners
   setupTabListeners();
+
+  // Log initialization complete
+  console.log('UME - Ultimate Media Extention: Initialization complete');
 }
 
 /**
@@ -73,10 +77,25 @@ async function initializeExtension() {
  */
 async function ensureDefaultSettings() {
   try {
-    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings));
+    // Ensure defaultSettings exists and is an object
+    if (!defaultSettings || typeof defaultSettings !== 'object') {
+      console.error('OneTab Media: defaultSettings is not properly defined');
+      return;
+    }
+
+    const settingsKeys = Object.keys(defaultSettings);
+    if (settingsKeys.length === 0) {
+      console.error('OneTab Media: defaultSettings is empty');
+      return;
+    }
+
+    const result = await browserAPI.storage.sync.get(settingsKeys);
+    
+    // Handle case where result is undefined or null
+    const safeResult = result || {};
     
     // Check if this is a fresh install (no settings exist)
-    const isFreshInstall = Object.keys(result).length === 0;
+    const isFreshInstall = Object.keys(safeResult).length === 0;
     
     if (isFreshInstall) {
       console.log('OneTab Media: Setting up defaults for fresh install');
@@ -86,7 +105,7 @@ async function ensureDefaultSettings() {
       // Ensure any missing settings are set to defaults
       const updates = {};
       for (const [key, defaultValue] of Object.entries(defaultSettings)) {
-        if (result[key] === undefined) {
+        if (safeResult[key] === undefined) {
           updates[key] = defaultValue;
         }
       }
@@ -100,8 +119,9 @@ async function ensureDefaultSettings() {
     // Migrate extensionEnabled to sync storage if it exists in local storage
     try {
       const localResult = await browserAPI.storage.local.get(['extensionEnabled']);
-      if (localResult.extensionEnabled !== undefined && result.extensionEnabled === undefined) {
-        await browserAPI.storage.sync.set({ extensionEnabled: localResult.extensionEnabled });
+      const safeLocalResult = localResult || {};
+      if (safeLocalResult.extensionEnabled !== undefined && safeResult.extensionEnabled === undefined) {
+        await browserAPI.storage.sync.set({ extensionEnabled: safeLocalResult.extensionEnabled });
         console.log('OneTab Media: Migrated extensionEnabled setting to sync storage');
       }
     } catch (migrationError) {
@@ -109,7 +129,7 @@ async function ensureDefaultSettings() {
     }
     
   } catch (error) {
-    console.error('OneTab Media: Failed to ensure default settings:', error);
+    console.error('UME - Ultimate Media Extention: Failed to ensure default settings:', error);
   }
 }
 
@@ -120,16 +140,19 @@ async function loadExtensionSettings() {
   try {
     // First try sync storage, then fall back to local storage
     let result = await browserAPI.storage.sync.get(['extensionEnabled']);
-    if (result.extensionEnabled === undefined) {
+    let safeResult = result || {};
+    
+    if (safeResult.extensionEnabled === undefined) {
       result = await browserAPI.storage.local.get(['extensionEnabled']);
+      safeResult = result || {};
     }
     
     // Handle case where result is undefined or doesn't have the property
-    isExtensionEnabled = result && result.extensionEnabled === false ? false : true; // Default to true
+    isExtensionEnabled = safeResult.extensionEnabled === false ? false : true; // Default to true
     console.log('OneTab Media: Extension enabled:', isExtensionEnabled);
     updateBadge();
   } catch (error) {
-    console.error('OneTab Media: Failed to load extension settings:', error);
+    console.error('UME - Ultimate Media Extention: Failed to load extension settings:', error);
     isExtensionEnabled = true;
     updateBadge();
   }
@@ -213,6 +236,11 @@ function setupMessageListeners() {
             sendResponse({ success: true });
             break;
             
+          case 'BROADCAST_SETTINGS_UPDATE':
+            broadcastSettingsUpdate(message.settings);
+            sendResponse({ success: true });
+            break;
+            
           default:
             console.warn('Unknown message type:', message.type);
         }
@@ -223,7 +251,7 @@ function setupMessageListeners() {
     })();
     
     // Return true for async messages that need sendResponse
-    return ['GET_SPEED_SETTINGS', 'UPDATE_SPEED_SETTINGS'].includes(message.type);
+    return ['GET_SPEED_SETTINGS', 'UPDATE_SPEED_SETTINGS', 'BROADCAST_SETTINGS_UPDATE'].includes(message.type);
   });
 }
 

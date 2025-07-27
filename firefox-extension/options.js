@@ -1,3 +1,8 @@
+/**
+ * UME - Ultimate Media Extention - Options Script
+ * Manages the extension's settings page interface and storage
+ */
+
 // Browser compatibility layer
 const browserAPI = (function() {
   if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -124,7 +129,7 @@ async function ensureDefaultsSet() {
     if (isFreshInstall) {
       console.log('OneTab Media: Setting up defaults for fresh install');
       await browserAPI.storage.sync.set(defaultSettings);
-      showStatus('Welcome to OneTab Media! Default settings have been applied and will sync across your devices.', 'success', 4000);
+      showStatus('Welcome to UME - Ultimate Media Extention! Default settings have been applied and will sync across your devices.', 'success', 4000);
     } else {
       // Ensure any missing settings are set to defaults
       const updates = {};
@@ -549,18 +554,13 @@ function showStatus(message, type = 'success', duration = 3000) {
 } 
 
 /**
- * Broadcast settings update to all content scripts
+ * Broadcast settings update to all content scripts via background script
  */
 async function broadcastSettingsUpdate(settings) {
   try {
-    const tabs = await browserAPI.tabs.query({});
-    tabs.forEach(tab => {
-      browserAPI.tabs.sendMessage(tab.id, {
-        type: 'UPDATE_SPEED_SETTINGS',
-        settings: settings
-      }).catch(() => {
-        // Ignore errors for tabs that don't have our content script
-      });
+    await browserAPI.runtime.sendMessage({
+      type: 'BROADCAST_SETTINGS_UPDATE',
+      settings: settings
     });
   } catch (error) {
     console.warn('Failed to broadcast settings update:', error);

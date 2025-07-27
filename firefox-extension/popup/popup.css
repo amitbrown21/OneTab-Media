@@ -65,6 +65,13 @@ body {
   animation: pulse 3s infinite;
 }
 
+.header-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
 .header-info {
   flex: 1;
 }
