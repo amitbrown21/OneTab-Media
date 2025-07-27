@@ -1,31 +1,30 @@
 {
   "manifest_version": 2,
   "name": "OneTab Media",
-  "version": "1.1.0",
-  "description": "Ensures only one tab can play audio/video at a time by automatically pausing media in other tabs",
-  
+  "version": "1.0",
+  "description": "Control media playback across all tabs with video speed controls",
+
   "permissions": [
-    "tabs",
-    "activeTab",
     "storage",
-    "http://*/*",
-    "https://*/*"
+    "tabs",
+    "<all_urls>",
+    "activeTab"
   ],
-  
+
   "background": {
     "scripts": ["background.js"],
     "persistent": false
   },
-  
+
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_start",
-      "all_frames": true
+      "css": ["controller.css"],
+      "run_at": "document_start"
     }
   ],
-  
+
   "browser_action": {
     "default_popup": "popup/popup.html",
     "default_title": "OneTab Media",
@@ -35,17 +34,22 @@
       "128": "icons/icon-128.png"
     }
   },
-  
+
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  
+
   "web_accessible_resources": [
-    "content.js"
+    "shadow.css"
   ],
-  
+
   "browser_specific_settings": {
     "gecko": {
       "id": "onetab-media@example.com",

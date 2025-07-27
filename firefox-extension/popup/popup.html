@@ -12,13 +12,21 @@
       <div class="header-content">
         <div class="header-icon">🎵</div>
         <div class="header-info">
-                      <h1 class="header-title">OneTab Media</h1>
-          <div class="extension-toggle">
-            <label class="toggle-switch">
-              <input type="checkbox" id="extensionToggle" checked>
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="toggle-label" id="toggleLabel">Enabled</span>
+          <h1 class="header-title">OneTab Media</h1>
+          <div class="header-controls">
+            <div class="extension-toggle">
+              <label class="toggle-switch">
+                <input type="checkbox" id="extensionToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label" id="toggleLabel">Enabled</span>
+            </div>
+            <div class="support-section">
+              <a href="https://coff.ee/AmDevMan" target="_blank" class="support-button" title="Support the developer">
+                <span class="support-icon">☕</span>
+                <span class="support-text">Support Developer</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -53,18 +61,34 @@
           <span class="button-icon">🔄</span>
           <span class="button-text">Refresh</span>
         </button>
+        <button class="control-button secondary" id="optionsButton" title="Open extension options">
+          <span class="button-icon">⚙️</span>
+          <span class="button-text">Options</span>
+        </button>
+      </div>
+      
+      <div class="speed-control-section" id="speedControlSection">
+        <h2 class="section-title">Current Speed</h2>
+        <div class="speed-info">
+          <span class="speed-label">Playback Speed:</span>
+          <span class="speed-value" id="currentSpeed">1.00x</span>
+        </div>
+        <div class="speed-instructions">
+          <p class="instruction-text">
+            <strong>Change speed using:</strong>
+          </p>
+          <ul class="instruction-list">
+            <li><strong>Keyboard shortcuts:</strong> S (slower), D (faster), R (reset)</li>
+            <li><strong>Video overlay:</strong> Hover over video for speed controls</li>
+            <li><strong>Options:</strong> Click the extension icon to access settings</li>
+          </ul>
+        </div>
       </div>
     </div>
     
     <footer class="popup-footer">
       <div class="footer-info">
         <small id="footerStatus">Extension active on all tabs</small>
-      </div>
-      <div class="support-section">
-        <a href="https://coff.ee/AmDevMan" target="_blank" class="support-button" title="Support the developer">
-          <span class="support-icon">☕</span>
-          <span class="support-text">Support Developer</span>
-        </a>
       </div>
     </footer>
   </div>

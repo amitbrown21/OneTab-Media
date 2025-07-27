@@ -72,8 +72,15 @@ body {
 .header-title {
   font-size: 18px;
   font-weight: 700;
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   letter-spacing: -0.025em;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .extension-toggle {
@@ -458,21 +465,50 @@ input:checked + .toggle-slider:before {
   justify-content: center;
 }
 
+/* Support button in header */
+.header-controls .support-section {
+  justify-content: flex-end;
+}
+
 .support-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
   color: white;
   text-decoration: none;
-  border-radius: var(--radius);
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
   font-weight: 600;
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(255, 107, 53, 0.25);
   border: none;
   cursor: pointer;
+}
+
+/* Header support button adjustments */
+.header-controls .support-button {
+  padding: 5px 10px;
+  font-size: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-controls .support-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.header-controls .support-button .support-icon {
+  font-size: 12px;
+}
+
+.header-controls .support-button .support-text {
+  font-size: 10px;
 }
 
 .support-button:hover {
@@ -543,6 +579,224 @@ input:checked + .toggle-slider:before {
   animation: none !important;
 }
 
+/* Speed Control Section */
+.speed-control-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.speed-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--background);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.speed-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.speed-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary-color);
+  font-family: 'Courier New', monospace;
+}
+
+.speed-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.speed-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.speed-button:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.speed-button.primary {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.speed-button.primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.speed-icon {
+  font-size: 16px;
+}
+
+.speed-text {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.seek-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.seek-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.seek-button:hover {
+  background: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.seek-icon {
+  font-size: 14px;
+}
+
+.seek-text {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.speed-presets {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.presets-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-button {
+  flex: 1;
+  min-width: 50px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.preset-button:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
+.preset-button.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+/* Speed control disabled state */
+.speed-control-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.speed-control-section.disabled .speed-value {
+  color: var(--text-muted);
+}
+
+/* Speed instructions */
+.speed-instructions {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.instruction-text {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.instruction-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.instruction-list li {
+  margin-bottom: 4px;
+}
+
+.instruction-list li:last-child {
+  margin-bottom: 0;
+}
+
+.speed-control-section.disabled .speed-instructions {
+  opacity: 0.6;
+}
+
 /* Responsive adjustments */
 @media (max-height: 500px) {
   .popup-container {
@@ -556,5 +810,17 @@ input:checked + .toggle-slider:before {
   .popup-content {
     padding: 16px;
     gap: 16px;
+  }
+  
+  .speed-control-section {
+    padding: 16px;
+  }
+  
+  .speed-buttons {
+    gap: 6px;
+  }
+  
+  .speed-button {
+    padding: 10px 6px;
   }
 } 

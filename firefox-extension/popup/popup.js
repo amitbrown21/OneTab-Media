@@ -21,10 +21,14 @@
   // DOM elements
   let statusDot, statusText, tabsList, noTabsMessage, pauseAllButton, refreshButton;
   let extensionToggle, toggleLabel, footerStatus, popupContainer;
+  let speedControlSection, currentSpeedDisplay;
+  let optionsButton;
   
   // State
   let currentTabs = [];
   let isExtensionEnabled = true;
+  let currentSpeed = 1.0;
+  let speedSettings = {};
   
   /**
    * Initialize popup when DOM is loaded
@@ -60,6 +64,11 @@
     toggleLabel = document.getElementById('toggleLabel');
     footerStatus = document.getElementById('footerStatus');
     popupContainer = document.querySelector('.popup-container');
+    
+    // Speed control elements
+    speedControlSection = document.getElementById('speedControlSection');
+    currentSpeedDisplay = document.getElementById('currentSpeed');
+    optionsButton = document.getElementById('optionsButton');
   }
   
   /**
@@ -71,6 +80,9 @@
     
     // Refresh button
     refreshButton?.addEventListener('click', handleRefresh);
+    
+    // Options button
+    optionsButton?.addEventListener('click', handleOptions);
     
     // Extension toggle
     extensionToggle?.addEventListener('change', handleExtensionToggle);
@@ -102,7 +114,8 @@
   async function loadExtensionSettings() {
     try {
       const result = await browserAPI.storage.local.get(['extensionEnabled']);
-      isExtensionEnabled = result.extensionEnabled !== false; // Default to true
+      // Handle case where result is undefined or doesn't have the property
+      isExtensionEnabled = result && result.extensionEnabled === false ? false : true; // Default to true
       updateExtensionToggleUI();
     } catch (error) {
       console.error('Failed to load extension settings:', error);
@@ -166,9 +179,12 @@
     try {
       const response = await sendMessage({ type: 'GET_ACTIVE_TABS' });
       
+      console.log('DEBUG: Received response from GET_ACTIVE_TABS:', response);
+      
       if (response) {
         updateUI(response);
       } else {
+        console.log('DEBUG: No response received, showing empty state');
         // Show empty state instead of error
         updateUI({ activeTabs: [], currentPlaying: null });
       }
@@ -185,6 +201,10 @@
     const { activeTabs = [], currentPlaying } = data;
     currentTabs = activeTabs;
     
+    console.log('DEBUG: updateUI called with data:', data);
+    console.log('DEBUG: activeTabs:', activeTabs);
+    console.log('DEBUG: currentPlaying:', currentPlaying);
+    
     // Update status indicator
     updateStatus(activeTabs.length, currentPlaying);
     
@@ -193,6 +213,9 @@
     
     // Update controls
     updateControls(activeTabs.length);
+    
+    // Update speed controls
+    updateSpeedControls(activeTabs);
   }
   
   /**
@@ -253,13 +276,22 @@
     tabItem.setAttribute('data-tab-id', tabId);
     
     // Create favicon
-    const favicon = document.createElement('img');
+    let favicon = document.createElement('img');
     favicon.className = 'tab-favicon';
     if (tabInfo.favicon) {
       favicon.src = tabInfo.favicon;
-      favicon.onerror = () => createFaviconPlaceholder(favicon, tabInfo.mediaType);
+      favicon.onerror = () => {
+        const placeholder = createFaviconPlaceholder(favicon, tabInfo.mediaType);
+        if (placeholder && favicon.parentNode) {
+          // createFaviconPlaceholder already handled the replacement
+        }
+      };
     } else {
-      createFaviconPlaceholder(favicon, tabInfo.mediaType);
+      // No favicon URL, use placeholder directly
+      const placeholder = createFaviconPlaceholder(favicon, tabInfo.mediaType);
+      if (placeholder) {
+        favicon = placeholder; // Use the placeholder element instead
+      }
     }
     
     // Create tab info
@@ -288,7 +320,8 @@
     statusIcon.textContent = isPlaying ? '▶️' : '⏸️';
     
     const statusText = document.createElement('span');
-    statusText.textContent = isPlaying ? 'Playing' : 'Paused';
+    const playbackRate = tabInfo.playbackRate || 1.0;
+    statusText.textContent = isPlaying ? `Playing (${playbackRate.toFixed(2)}x)` : 'Paused';
     
     statusDiv.appendChild(statusIcon);
     statusDiv.appendChild(statusText);
@@ -333,23 +366,23 @@
   }
   
   /**
-   * Create a favicon placeholder
+   * Create a placeholder favicon when image fails to load
    */
   function createFaviconPlaceholder(imgElement, mediaType) {
-    imgElement.className = 'tab-favicon placeholder';
-    imgElement.style.fontSize = '10px';
-    imgElement.style.background = '#dee2e6';
-    imgElement.style.display = 'flex';
-    imgElement.style.alignItems = 'center';
-    imgElement.style.justifyContent = 'center';
-    imgElement.style.color = '#6c757d';
-    
     // Replace img with div for placeholder
     const placeholder = document.createElement('div');
     placeholder.className = 'tab-favicon placeholder';
     placeholder.textContent = mediaType === 'video' ? '📹' : '🎵';
     
-    imgElement.parentNode.replaceChild(placeholder, imgElement);
+    // Check if imgElement has a parent before replacing
+    if (imgElement.parentNode) {
+      imgElement.parentNode.replaceChild(placeholder, imgElement);
+    } else {
+      // If no parent, copy the className and return the placeholder
+      // This handles cases where the element isn't in the DOM yet
+      placeholder.className = imgElement.className + ' placeholder';
+      return placeholder;
+    }
   }
   
   /**
@@ -414,6 +447,18 @@
       showError('Failed to refresh data');
     }
   }
+
+  /**
+   * Handle options button click
+   */
+  async function handleOptions() {
+    try {
+      await browserAPI.runtime.openOptionsPage();
+    } catch (error) {
+      console.error('Failed to open options page:', error);
+      showError('Failed to open options page');
+    }
+  }
   
   /**
    * Pause media in a specific tab
@@ -442,6 +487,40 @@
     }
   }
   
+  /**
+   * Update speed controls based on current tab data
+   */
+  function updateSpeedControls(tabs) {
+    if (!speedControlSection) return;
+    
+    const playingTabs = tabs.filter(tab => tab.isPlaying);
+    const hasPlayingMedia = playingTabs.length > 0;
+    
+    // Show/hide speed controls based on media presence
+    if (hasPlayingMedia) {
+      speedControlSection.classList.remove('disabled');
+      
+      // Get the speed of the first playing tab (assume all have same speed for simplicity)
+      const firstPlayingTab = playingTabs[0];
+      if (firstPlayingTab.playbackRate !== undefined) {
+        updateSpeedDisplay(firstPlayingTab.playbackRate);
+      }
+    } else {
+      speedControlSection.classList.add('disabled');
+      updateSpeedDisplay(1.0);
+    }
+  }
+
+  /**
+   * Update speed display in the popup
+   */
+  function updateSpeedDisplay(speed) {
+    if (currentSpeedDisplay) {
+      currentSpeed = speed;
+      currentSpeedDisplay.textContent = speed.toFixed(2) + 'x';
+    }
+  }
+
   /**
    * Send message to background script
    */

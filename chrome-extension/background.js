@@ -18,18 +18,48 @@ const browserAPI = (function() {
   return null;
 })();
 
+// Default settings - must match options.js
+const defaultSettings = {
+  extensionEnabled: true,
+  enabled: true, // Legacy compatibility
+  showController: true,
+  startHidden: false,
+  rememberSpeed: false,
+  forceLastSavedSpeed: false, // Always apply last saved speed to new videos
+  audioBoolean: false,
+  controllerOpacity: 0.3,
+  speed: 1.0, // Default speed for videos
+  displayKeyCode: 86, // V key for display toggle
+  keyBindings: [
+    { action: 'display', key: 86, value: 0, force: false, predefined: true }, // V
+    { action: 'slower', key: 83, value: 0.1, force: false, predefined: true }, // S
+    { action: 'faster', key: 68, value: 0.1, force: false, predefined: true }, // D
+    { action: 'rewind', key: 90, value: 10, force: false, predefined: true }, // Z
+    { action: 'advance', key: 88, value: 10, force: false, predefined: true }, // X
+    { action: 'reset', key: 82, value: 1.0, force: false, predefined: true }, // R
+    { action: 'fast', key: 71, value: 1.8, force: false, predefined: true } // G
+  ],
+  blacklist: `www.instagram.com
+twitter.com
+imgur.com
+teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, '')
+};
+
 /**
  * Initialize extension when background script starts
  */
-function initializeExtension() {
+async function initializeExtension() {
   console.log('OneTab Media: Background script initialized');
   
   // Clear any existing state
   activeMediaTabs.clear();
   currentPlayingTab = null;
   
+  // Ensure default settings are applied
+  await ensureDefaultSettings();
+  
   // Load extension settings
-  loadExtensionSettings();
+  await loadExtensionSettings();
   
   // Set up message listeners
   setupMessageListeners();
@@ -39,63 +69,161 @@ function initializeExtension() {
 }
 
 /**
- * Load extension settings from storage
+ * Ensure default settings are properly set on extension startup
  */
-async function loadExtensionSettings() {
+async function ensureDefaultSettings() {
   try {
-    const result = await browserAPI.storage.local.get(['extensionEnabled']);
-    isExtensionEnabled = result.extensionEnabled !== false; // Default to true
-    console.log('Extension enabled:', isExtensionEnabled);
-    updateBadge();
+    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings));
+    
+    // Check if this is a fresh install (no settings exist)
+    const isFreshInstall = Object.keys(result).length === 0;
+    
+    if (isFreshInstall) {
+      console.log('OneTab Media: Setting up defaults for fresh install');
+      await browserAPI.storage.sync.set(defaultSettings);
+      console.log('OneTab Media: Default settings applied successfully');
+    } else {
+      // Ensure any missing settings are set to defaults
+      const updates = {};
+      for (const [key, defaultValue] of Object.entries(defaultSettings)) {
+        if (result[key] === undefined) {
+          updates[key] = defaultValue;
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        console.log('OneTab Media: Adding missing default settings:', updates);
+        await browserAPI.storage.sync.set(updates);
+      }
+    }
+    
+    // Migrate extensionEnabled to sync storage if it exists in local storage
+    try {
+      const localResult = await browserAPI.storage.local.get(['extensionEnabled']);
+      if (localResult.extensionEnabled !== undefined && result.extensionEnabled === undefined) {
+        await browserAPI.storage.sync.set({ extensionEnabled: localResult.extensionEnabled });
+        console.log('OneTab Media: Migrated extensionEnabled setting to sync storage');
+      }
+    } catch (migrationError) {
+      console.warn('OneTab Media: Failed to migrate extensionEnabled setting:', migrationError);
+    }
+    
   } catch (error) {
-    console.error('Failed to load extension settings:', error);
-    isExtensionEnabled = true;
+    console.error('OneTab Media: Failed to ensure default settings:', error);
   }
 }
 
 /**
- * Set up message listeners for communication with content scripts
+ * Load extension settings from storage
+ */
+async function loadExtensionSettings() {
+  try {
+    // First try sync storage, then fall back to local storage
+    let result = await browserAPI.storage.sync.get(['extensionEnabled']);
+    if (result.extensionEnabled === undefined) {
+      result = await browserAPI.storage.local.get(['extensionEnabled']);
+    }
+    
+    // Handle case where result is undefined or doesn't have the property
+    isExtensionEnabled = result && result.extensionEnabled === false ? false : true; // Default to true
+    console.log('OneTab Media: Extension enabled:', isExtensionEnabled);
+    updateBadge();
+  } catch (error) {
+    console.error('OneTab Media: Failed to load extension settings:', error);
+    isExtensionEnabled = true;
+    updateBadge();  
+  }
+}
+
+/**
+ * Set up message listeners for communication with content scripts and popup
  */
 function setupMessageListeners() {
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const tabId = sender.tab?.id;
     
+    // Handle synchronous messages first
     switch (message.type) {
-      case 'MEDIA_STARTED':
-        if (isExtensionEnabled) {
-          handleMediaStarted(tabId, sender.tab, message.mediaInfo);
-        }
-        break;
+      case 'GET_ACTIVE_TABS':
+        const state = getExtensionState();
+        console.log('DEBUG: GET_ACTIVE_TABS - activeMediaTabs size:', activeMediaTabs.size);
+        console.log('DEBUG: GET_ACTIVE_TABS - state object:', state);
+        console.log('DEBUG: Sending state from background:', state);
+        sendResponse(state);
+        return false; // Synchronous response
         
       case 'MEDIA_PAUSED':
         handleMediaPaused(tabId);
-        break;
+        return false; // Synchronous response
         
       case 'MEDIA_ENDED':
         handleMediaEnded(tabId);
-        break;
-        
-      case 'GET_ACTIVE_TABS':
-        const state = getExtensionState();
-        sendResponse(state);
-        break;
+        return false; // Synchronous response
         
       case 'PAUSE_TAB':
         pauseTabMedia(message.tabId);
-        break;
+        return false; // Synchronous response
         
-
+      case 'SPEED_CHANGED':
+        handleSpeedChanged(tabId, message.speed, message.src);
+        return false; // Synchronous response
+        
+      case 'SET_TAB_SPEED':
+        setTabSpeed(message.tabId, message.speed);
+        return false; // Synchronous response
+        
+      case 'SPEED_ACTION_TAB':
+        sendSpeedActionToTab(message.tabId, message.action, message.value);
+        return false; // Synchronous response
         
       case 'EXTENSION_TOGGLE':
         handleExtensionToggle(message.enabled);
-        break;
-        
-      default:
-        console.warn('Unknown message type:', message.type);
+        return false; // Synchronous response
     }
     
-    // Return true to indicate async response handling
-    return true;
+    // Handle async messages
+    (async () => {
+      try {
+        switch (message.type) {
+          case 'MEDIA_STARTED':
+            // Get tab info and call handleMediaStarted with correct parameters
+            try {
+              const tab = await browserAPI.tabs.get(tabId);
+              console.log('DEBUG: tabs.get result:', tab);
+              handleMediaStarted(tabId, tab, message.mediaInfo);
+            } catch (error) {
+              console.error('DEBUG: Failed to get tab info:', error);
+              // Call with fallback tab info
+              const fallbackTab = {
+                url: message.mediaInfo?.src || 'Unknown URL',
+                title: message.mediaInfo?.title || 'Unknown Title',
+                favIconUrl: null
+              };
+              handleMediaStarted(tabId, fallbackTab, message.mediaInfo);
+            }
+            break;
+            
+          case 'GET_SPEED_SETTINGS':
+            const settings = await getSpeedSettings();
+            sendResponse(settings);
+            break;
+            
+          case 'UPDATE_SPEED_SETTINGS':
+            await updateSpeedSettings(message.settings);
+            sendResponse({ success: true });
+            break;
+            
+          default:
+            console.warn('Unknown message type:', message.type);
+        }
+      } catch (error) {
+        console.error('Error handling async message:', error);
+        sendResponse({ error: error.message });
+      }
+    })();
+    
+    // Return true for async messages that need sendResponse
+    return ['GET_SPEED_SETTINGS', 'UPDATE_SPEED_SETTINGS'].includes(message.type);
   });
 }
 
@@ -162,9 +290,12 @@ function setupTabListeners() {
  */
 function handleMediaStarted(tabId, tab, mediaInfo) {
   console.log(`Media started in tab ${tabId}:`, mediaInfo);
+  console.log('DEBUG: handleMediaStarted - tab info:', tab);
+  console.log('DEBUG: handleMediaStarted - isExtensionEnabled:', isExtensionEnabled);
   
   // If extension is disabled, don't manage media
   if (!isExtensionEnabled) {
+    console.log('DEBUG: Extension disabled, not storing tab');
     return;
   }
   
@@ -173,14 +304,26 @@ function handleMediaStarted(tabId, tab, mediaInfo) {
     pauseTabMedia(currentPlayingTab);
   }
   
+  console.log('DEBUG: About to store tab in activeMediaTabs');
+  
+  // Handle case where tab info is unavailable
+  const safeTab = tab || {
+    url: mediaInfo?.src || 'Unknown URL',
+    title: mediaInfo?.title || 'Unknown Title',
+    favIconUrl: null
+  };
+  
   // Update the active media tabs
   activeMediaTabs.set(tabId, {
-    url: tab.url,
-    title: tab.title,
+    url: safeTab.url,
+    title: safeTab.title,
     mediaType: mediaInfo.type,
     timestamp: Date.now(),
-    favicon: tab.favIconUrl
+    favicon: safeTab.favIconUrl
   });
+  
+  console.log('DEBUG: activeMediaTabs.size after storing:', activeMediaTabs.size);
+  console.log('DEBUG: Tab stored:', activeMediaTabs.get(tabId));
   
   // Set this tab as the currently playing tab
   currentPlayingTab = tabId;
@@ -316,6 +459,178 @@ function notifyPopupStateChange() {
     });
   } catch (error) {
     // Popup is not open or other error, ignore
+  }
+}
+
+/**
+ * Handle speed change notification from content script
+ */
+function handleSpeedChanged(tabId, speed, src) {
+  console.log(`Speed changed in tab ${tabId}: ${speed} for ${src}`);
+  
+  // Update the active media tab info if it exists
+  if (activeMediaTabs.has(tabId)) {
+    const tabInfo = activeMediaTabs.get(tabId);
+    tabInfo.playbackRate = speed;
+    tabInfo.lastSpeedChange = Date.now();
+    activeMediaTabs.set(tabId, tabInfo);
+  }
+  
+  // Notify popup of state change
+  notifyPopupStateChange();
+}
+
+/**
+ * Set speed for a specific tab
+ */
+async function setTabSpeed(tabId, speed) {
+  if (!activeMediaTabs.has(tabId)) {
+    console.warn(`Cannot set speed for tab ${tabId}: not found in active tabs`);
+    return;
+  }
+  
+  try {
+    await browserAPI.tabs.sendMessage(tabId, {
+      type: 'SET_SPEED',
+      speed: speed
+    });
+    console.log(`Set speed to ${speed} for tab ${tabId}`);
+  } catch (error) {
+    console.warn(`Failed to set speed for tab ${tabId}:`, error);
+  }
+}
+
+/**
+ * Send speed action to a specific tab
+ */
+async function sendSpeedActionToTab(tabId, action, value) {
+  try {
+    await browserAPI.tabs.sendMessage(tabId, {
+      type: 'SPEED_ACTION',
+      action: action,
+      value: value
+    });
+    console.log(`Sent speed action ${action} to tab ${tabId}`);
+  } catch (error) {
+    console.warn(`Failed to send speed action to tab ${tabId}:`, error);
+  }
+}
+
+/**
+ * Get speed settings from storage
+ */
+async function getSpeedSettings() {
+  try {
+    const result = await browserAPI.storage.sync.get([
+      'enabled',
+      'showController',
+      'startHidden',
+      'rememberSpeed',
+      'forceLastSavedSpeed',
+      'controllerOpacity',
+      'speed',
+      'displayKeyCode',
+      'keyBindings',
+      'blacklist',
+      'videoSpeedSettings', // Legacy support
+      'videoSpeedEnabled',  // Legacy support
+      'lastSpeed'          // Legacy support
+    ]);
+    
+    return {
+      enabled: result.enabled !== false,
+      showController: result.showController !== false,
+      startHidden: result.startHidden || false,
+      rememberSpeed: result.rememberSpeed || false,
+      forceLastSavedSpeed: result.forceLastSavedSpeed || false,
+      controllerOpacity: result.controllerOpacity || 0.3,
+      speed: result.speed || 1.0,
+      displayKeyCode: result.displayKeyCode || 86,
+      keyBindings: result.keyBindings || defaultSettings.keyBindings,
+      blacklist: result.blacklist || defaultSettings.blacklist,
+      // Legacy support
+      videoSpeedSettings: result.videoSpeedSettings || {},
+      videoSpeedEnabled: result.videoSpeedEnabled !== false,
+      lastSpeed: result.lastSpeed || result.speed || 1.0
+    };
+  } catch (error) {
+    console.error('OneTab Media: Failed to get speed settings:', error);
+    return {
+      enabled: true,
+      showController: true,
+      startHidden: false,
+      rememberSpeed: false,
+      forceLastSavedSpeed: false,
+      controllerOpacity: 0.3,
+      speed: 1.0,
+      displayKeyCode: 86,
+      keyBindings: defaultSettings.keyBindings,
+      blacklist: defaultSettings.blacklist,
+      videoSpeedSettings: {},
+      videoSpeedEnabled: true,
+      lastSpeed: 1.0
+    };
+  }
+}
+
+/**
+ * Update speed settings in storage
+ */
+async function updateSpeedSettings(settings) {
+  try {
+    const updates = {};
+    
+    // Update individual settings if provided
+    if (settings.enabled !== undefined) updates.enabled = settings.enabled;
+    if (settings.showController !== undefined) updates.showController = settings.showController;
+    if (settings.startHidden !== undefined) updates.startHidden = settings.startHidden;
+    if (settings.rememberSpeed !== undefined) updates.rememberSpeed = settings.rememberSpeed;
+    if (settings.forceLastSavedSpeed !== undefined) updates.forceLastSavedSpeed = settings.forceLastSavedSpeed;
+    if (settings.controllerOpacity !== undefined) updates.controllerOpacity = settings.controllerOpacity;
+    if (settings.speed !== undefined) updates.speed = settings.speed;
+    if (settings.displayKeyCode !== undefined) updates.displayKeyCode = settings.displayKeyCode;
+    if (settings.keyBindings !== undefined) updates.keyBindings = settings.keyBindings;
+    if (settings.blacklist !== undefined) updates.blacklist = settings.blacklist;
+    
+    // Legacy support
+    if (settings.videoSpeedSettings !== undefined) updates.videoSpeedSettings = settings.videoSpeedSettings;
+    if (settings.videoSpeedEnabled !== undefined) updates.videoSpeedEnabled = settings.videoSpeedEnabled;
+    if (settings.lastSpeed !== undefined) {
+      updates.lastSpeed = settings.lastSpeed;
+      updates.speed = settings.lastSpeed; // Sync with new speed setting
+    }
+    
+    await browserAPI.storage.sync.set(updates);
+    console.log('OneTab Media: Speed settings updated:', updates);
+    
+    // Broadcast settings update to all content scripts
+    broadcastSettingsUpdate(updates);
+  } catch (error) {
+    console.error('OneTab Media: Failed to update speed settings:', error);
+  }
+}
+
+/**
+ * Broadcast settings updates to all content scripts
+ */
+function broadcastSettingsUpdate(settings) {
+  try {
+    browserAPI.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        try {
+          browserAPI.tabs.sendMessage(tab.id, {
+            type: 'SETTINGS_UPDATED',
+            settings: settings
+          }).catch(() => {
+            // Ignore errors for tabs without content scripts
+          });
+        } catch (error) {
+          // Ignore errors for tabs that can't receive messages
+        }
+      });
+    });
+  } catch (error) {
+    console.warn('OneTab Media: Failed to broadcast settings update:', error);
   }
 }
 
