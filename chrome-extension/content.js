@@ -129,7 +129,7 @@
       controls.id = 'controls';
 
       // Create control buttons
-      const buttons = [
+      const buttonConfigs = [
         { title: 'Slower (S)', class: 'rw', text: '−' },
         { title: 'Faster (D)', class: '', text: '+' },
         { title: 'Rewind (Z)', class: 'rw', text: '«' },
@@ -138,7 +138,7 @@
         { title: 'Hide (V)', class: 'hideButton', text: '×' }
       ];
 
-      buttons.forEach(buttonConfig => {
+      buttonConfigs.forEach(buttonConfig => {
         const button = document.createElement('button');
         button.title = buttonConfig.title;
         if (buttonConfig.class) {
