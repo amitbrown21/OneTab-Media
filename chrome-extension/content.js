@@ -106,25 +106,52 @@
 
       // Create shadow DOM
       const shadow = wrapper.attachShadow({ mode: 'open' });
-      const shadowTemplate = `
-        <style>
-          @import "${browserAPI.runtime.getURL('shadow.css')}";
-        </style>
+      
+      // Create and append stylesheet
+      const style = document.createElement('style');
+      style.textContent = `@import "${browserAPI.runtime.getURL('shadow.css')}";`;
+      shadow.appendChild(style);
 
-        <div id="controller" style="top:${top}; left:${left}; opacity:${speedSettings.controllerOpacity}">
-          <span class="draggable">${speed}x</span>
-          <span id="controls">
-            <button title="Slower (S)" class="rw">−</button>
-            <button title="Faster (D)">+</button>
-            <button title="Rewind (Z)" class="rw">«</button>
-            <button title="Advance (X)">»</button>
-            <button title="Reset (R)">⌂</button>
-            <button title="Hide (V)" class="hideButton">×</button>
-          </span>
-        </div>
-      `;
+      // Create controller div
+      const controller = document.createElement('div');
+      controller.id = 'controller';
+      controller.style.top = top;
+      controller.style.left = left;
+      controller.style.opacity = speedSettings.controllerOpacity;
 
-      shadow.innerHTML = shadowTemplate;
+      // Create draggable speed display
+      const speedDisplay = document.createElement('span');
+      speedDisplay.className = 'draggable';
+      speedDisplay.textContent = speed + 'x';
+
+      // Create controls container
+      const controls = document.createElement('span');
+      controls.id = 'controls';
+
+      // Create control buttons
+      const buttons = [
+        { title: 'Slower (S)', class: 'rw', text: '−' },
+        { title: 'Faster (D)', class: '', text: '+' },
+        { title: 'Rewind (Z)', class: 'rw', text: '«' },
+        { title: 'Advance (X)', class: '', text: '»' },
+        { title: 'Reset (R)', class: '', text: '⌂' },
+        { title: 'Hide (V)', class: 'hideButton', text: '×' }
+      ];
+
+      buttons.forEach(buttonConfig => {
+        const button = document.createElement('button');
+        button.title = buttonConfig.title;
+        if (buttonConfig.class) {
+          button.className = buttonConfig.class;
+        }
+        button.textContent = buttonConfig.text;
+        controls.appendChild(button);
+      });
+
+      // Assemble the DOM structure
+      controller.appendChild(speedDisplay);
+      controller.appendChild(controls);
+      shadow.appendChild(controller);
 
       // Get shadow DOM elements with error checking
       this.shadow = shadow;
