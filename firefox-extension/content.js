@@ -481,40 +481,74 @@
   }
 
   /**
+   * Handle keyboard events for speed control
+   */
+  function handleKeyboardEvent(event) {
+    const keyCode = event.keyCode;
+    
+    // Ignore if modifiers are active
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+    
+    // Ignore if typing in input fields (except when target is video element)
+    if (event.target.nodeName === 'INPUT' || 
+        event.target.nodeName === 'TEXTAREA' || 
+        event.target.isContentEditable) {
+      return;
+    }
+    
+    // Ignore if no media elements are present
+    if (activeMediaElements.size === 0) {
+      return;
+    }
+    
+    // Find matching key binding
+    const binding = speedSettings.keyBindings.find(item => item.key === keyCode);
+    if (binding && speedSettings.enabled) {
+      runSpeedAction(binding.action, binding.value);
+      
+      // Always prevent default and stop propagation for video speed control shortcuts
+      // This ensures they work in fullscreen mode and don't conflict with player controls
+      event.preventDefault();
+      event.stopPropagation();
+      
+      console.log('OneTab Media: Keyboard shortcut executed:', binding.action, 'on target:', event.target.tagName);
+    }
+  }
+
+  /**
    * Set up keyboard shortcuts for video speed control
    */
   function setupKeyboardShortcuts() {
-    document.addEventListener('keydown', function(event) {
-      const keyCode = event.keyCode;
-      
-      // Ignore if modifiers are active
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-        return;
+    // Global document listener for general page interaction
+    document.addEventListener('keydown', handleKeyboardEvent, true);
+    
+    // Also listen for fullscreen changes to ensure shortcuts work in fullscreen mode
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+  }
+
+  /**
+   * Handle fullscreen state changes
+   */
+  function handleFullscreenChange() {
+    const fullscreenElement = document.fullscreenElement || 
+                            document.webkitFullscreenElement || 
+                            document.mozFullScreenElement || 
+                            document.msFullscreenElement;
+    
+    if (fullscreenElement) {
+      console.log('OneTab Media: Video entered fullscreen mode');
+      // Ensure the fullscreen element can receive keyboard events
+      if (fullscreenElement.tagName === 'VIDEO') {
+        fullscreenElement.focus();
       }
-      
-      // Ignore if typing in input fields
-      if (event.target.nodeName === 'INPUT' || 
-          event.target.nodeName === 'TEXTAREA' || 
-          event.target.isContentEditable) {
-        return;
-      }
-      
-      // Ignore if no media elements are present
-      if (activeMediaElements.size === 0) {
-        return;
-      }
-      
-      // Find matching key binding
-      const binding = speedSettings.keyBindings.find(item => item.key === keyCode);
-      if (binding && speedSettings.enabled) {
-        runSpeedAction(binding.action, binding.value);
-        
-        if (binding.force) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      }
-    }, true);
+    } else {
+      console.log('OneTab Media: Video exited fullscreen mode');
+    }
   }
 
   /**
@@ -674,6 +708,12 @@
         console.log('OneTab Media: Cleaned up VideoController for removed element');
       }
       
+      // Remove keyboard event listeners from video elements
+      if (element.tagName && element.tagName.toLowerCase() === 'video') {
+        element.removeEventListener('keydown', handleKeyboardEvent, true);
+        console.log('OneTab Media: Removed keyboard listeners from video element');
+      }
+      
       // Remove from tracked elements
       if (trackedElements.has(element)) {
         trackedElements.delete(element);
@@ -740,7 +780,7 @@
     }
   }
   
-  /**
+    /**
    * Attach event listeners to a media element
    */
   function attachMediaListeners(element) {
@@ -766,12 +806,19 @@
       }
     }
     
+    // Add keyboard event listeners directly to video elements for fullscreen support
+    if (element.tagName.toLowerCase() === 'video') {
+      element.addEventListener('keydown', handleKeyboardEvent, true);
+      element.setAttribute('tabindex', '-1'); // Make video focusable for keyboard events
+      console.log('OneTab Media: Added keyboard listeners to video element for fullscreen support');
+    }
+    
     // Play event
     element.addEventListener('play', () => {
       handleMediaPlay(element);
     });
     
-    // Pause event  
+    // Pause event
     element.addEventListener('pause', () => {
       handleMediaPause(element);
     });
