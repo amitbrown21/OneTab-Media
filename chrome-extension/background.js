@@ -299,18 +299,46 @@ function setupTabListeners() {
     }
   });
   
-  // Clean up when tab is updated (e.g., navigation)
+  // Intelligent cleanup when tab is updated - only remove on actual navigation
   browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url && activeMediaTabs.has(tabId)) {
-      // URL changed, likely navigated away from media content
-      activeMediaTabs.delete(tabId);
-      if (currentPlayingTab === tabId) {
-        currentPlayingTab = null;
+      const currentTabInfo = activeMediaTabs.get(tabId);
+      const currentUrl = new URL(currentTabInfo.url);
+      
+      try {
+        const newUrl = new URL(changeInfo.url);
+        
+        // Only remove if hostname changed (actual navigation to different site)
+        // Keep tracking for SPA routing, hash changes, query params, etc.
+        if (currentUrl.hostname !== newUrl.hostname) {
+          console.log(`Media tab ${tabId} navigated to different hostname: ${currentUrl.hostname} -> ${newUrl.hostname}`);
+          activeMediaTabs.delete(tabId);
+          if (currentPlayingTab === tabId) {
+            currentPlayingTab = null;
+          }
+          updateBadge();
+          notifyPopupStateChange();
+        } else {
+          // Same hostname - update URL but keep tracking
+          currentTabInfo.url = changeInfo.url;
+          currentTabInfo.timestamp = Date.now(); // Update activity timestamp
+          console.log(`Media tab ${tabId} URL updated on same hostname: ${changeInfo.url}`);
+        }
+      } catch (error) {
+        // If URL parsing fails, be conservative and remove the tab
+        console.warn(`Failed to parse URL for tab ${tabId}, removing from tracking:`, error);
+        activeMediaTabs.delete(tabId);
+        if (currentPlayingTab === tabId) {
+          currentPlayingTab = null;
+        }
+        updateBadge();
+        notifyPopupStateChange();
       }
-      updateBadge();
-      notifyPopupStateChange();
     }
   });
+  
+  // Set up periodic cleanup to remove truly stale tabs
+  setupPeriodicCleanup();
 }
 
 /**
@@ -660,6 +688,89 @@ function broadcastSettingsUpdate(settings) {
   } catch (error) {
     console.warn('OneTab Media: Failed to broadcast settings update:', error);
   }
+}
+
+/**
+ * Set up periodic cleanup to verify tabs are still valid and contain active media
+ */
+function setupPeriodicCleanup() {
+  // Run cleanup every 5 minutes
+  setInterval(async () => {
+    try {
+      console.log('Running periodic media tab cleanup...');
+      const currentTime = Date.now();
+      const staleThreshold = 30 * 60 * 1000; // 30 minutes
+      const tabsToRemove = [];
+      
+      // Check each tracked tab
+      for (const [tabId, tabInfo] of activeMediaTabs.entries()) {
+        const ageMinutes = (currentTime - tabInfo.timestamp) / 60000;
+        
+        try {
+          // Verify tab still exists and is accessible
+          const tab = await browserAPI.tabs.get(tabId);
+          
+          if (!tab || tab.discarded) {
+            console.log(`Removing discarded tab ${tabId} from media tracking`);
+            tabsToRemove.push(tabId);
+            continue;
+          }
+          
+          // Check if tab has been inactive for too long (30+ minutes)
+          if (currentTime - tabInfo.timestamp > staleThreshold) {
+            console.log(`Removing stale tab ${tabId} (inactive for ${ageMinutes.toFixed(1)} minutes)`);
+            tabsToRemove.push(tabId);
+            continue;
+          }
+          
+          // Verify the tab still has the expected content by checking URL
+          if (tab.url && tabInfo.url) {
+            try {
+              const currentHostname = new URL(tab.url).hostname;
+              const trackedHostname = new URL(tabInfo.url).hostname;
+              
+              if (currentHostname !== trackedHostname) {
+                console.log(`Removing tab ${tabId} - hostname changed from ${trackedHostname} to ${currentHostname}`);
+                tabsToRemove.push(tabId);
+              }
+            } catch (urlError) {
+              console.warn(`Could not parse URLs for tab ${tabId}, keeping in tracking`);
+            }
+          }
+          
+        } catch (tabError) {
+          // Tab no longer exists or is not accessible
+          console.log(`Removing inaccessible tab ${tabId} from media tracking:`, tabError.message);
+          tabsToRemove.push(tabId);
+        }
+      }
+      
+      // Remove stale tabs
+      let removedCount = 0;
+      tabsToRemove.forEach(tabId => {
+        if (activeMediaTabs.has(tabId)) {
+          activeMediaTabs.delete(tabId);
+          if (currentPlayingTab === tabId) {
+            currentPlayingTab = null;
+          }
+          removedCount++;
+        }
+      });
+      
+      if (removedCount > 0) {
+        console.log(`Periodic cleanup removed ${removedCount} stale media tabs`);
+        updateBadge();
+        notifyPopupStateChange();
+      } else {
+        console.log('Periodic cleanup: all media tabs are still valid');
+      }
+      
+    } catch (error) {
+      console.error('Error during periodic media tab cleanup:', error);
+    }
+  }, 5 * 60 * 1000); // Every 5 minutes
+  
+  console.log('Periodic media tab cleanup scheduled (every 5 minutes)');
 }
 
 // Initialize when background script loads
