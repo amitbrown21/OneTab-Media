@@ -3,10 +3,95 @@
  * Manages extension state, settings, and communication between components
  */
 
-// Global state to track active media tabs
-let activeMediaTabs = new Map(); // tabId -> { url, title, mediaType, timestamp }
+// Global state to track media tabs
+let activeMediaTabs = new Map(); // tabId -> { url, title, mediaType, timestamp, isPlaying }
+let potentialMediaTabs = new Map(); // tabId -> { url, title, status, timestamp }
 let currentPlayingTab = null;
 let isExtensionEnabled = true; // Extension enabled by default
+
+// Comprehensive list of common media/audio/video streaming sites
+const MEDIA_SITES = [
+  // Global video platforms
+  'youtube.com', 'youtu.be', 'youtube-nocookie.com', 'm.youtube.com', 'music.youtube.com',
+  'vimeo.com', 'player.vimeo.com', 'dailymotion.com', 'metacafe.com', 'vevo.com', 'rutube.ru', 'tubitv.com', 'pluto.tv',
+  'rumble.com', 'odysee.com', 'bitchute.com', 'peertube',
+  // Live streaming
+  'twitch.tv', 'kick.com', 'dlive.tv', 'facebook.com/live', 'youtube.com/live',
+  // US streaming services
+  'netflix.com', 'hulu.com', 'primevideo.com', 'amazon.com/video', 'disneyplus.com', 'disney.com',
+  'hbomax.com', 'max.com', 'paramountplus.com', 'peacocktv.com', 'apple.com/tv', 'tv.apple.com',
+  'roku.com', 'rokuchannel.roku.com', 'crackle.com', 'kanopy.com', 'plex.tv', 'app.plex.tv', 'jellyfin.org', 'jellyfin.org/web', 'emby.media', 'app.emby.media',
+  // Anime and intl streaming
+  'crunchyroll.com', 'funimation.com', 'vrv.co', 'viki.com', 'hidive.com',
+  'bilibili.com', 'youku.com', 'iqiyi.com', 'iq.com', 'wetv.vip', 'nicovideo.jp', 'niconico.jp',
+  // UK/AU and other regionals
+  'bbc.co.uk/iplayer', 'itv.com', 'itvx.com', 'channel4.com', 'sbs.com.au/ondemand', '9now.com.au', 'stan.com.au',
+  // Social with media
+  'facebook.com', 'fb.watch', 'instagram.com', 'tiktok.com', 'reddit.com', 'twitter.com', 'x.com', 'vk.com', 'ok.ru',
+  // Music streaming
+  'spotify.com', 'open.spotify.com', 'music.apple.com', 'soundcloud.com', 'bandcamp.com', 'deezer.com', 'tidal.com',
+  'pandora.com', 'iheartradio.com', 'tunein.com', 'audible.com', 'podcasts.apple.com', 'pocketcasts.com',
+  // Adult (media heavy)
+  'pornhub.com', 'xvideos.com', 'redtube.com', 'xhamster.com', 'youporn.com', 'spankbang.com', 'xnxx.com'
+];
+
+/**
+ * Check if URL is a potential media site
+ */
+function isPotentialMediaSite(url) {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    const hostname = u.hostname.toLowerCase();
+    return MEDIA_SITES.some(site => {
+      const s = site.toLowerCase();
+      if (s.includes('/')) return url.toLowerCase().includes(s);
+      return hostname === s || hostname.endsWith('.' + s);
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Add tab to potential media tracking
+ */
+function addPotentialTab(tabId, url, title) {
+  potentialMediaTabs.set(tabId, {
+    url: url,
+    title: title || 'Unknown',
+    status: 'monitoring', // monitoring, has_media, playing, paused
+    timestamp: Date.now()
+  });
+  
+  console.log(`Added potential media tab: ${url}`);
+  updateBadge();
+  notifyPopupStateChange();
+  
+  // Check if it actually has media
+  setTimeout(() => checkTabForMedia(tabId), 2000);
+}
+
+/**
+ * Check tab for actual media elements
+ */
+async function checkTabForMedia(tabId) {
+  try {
+    const response = await browserAPI.tabs.sendMessage(tabId, {
+      type: 'CHECK_FOR_MEDIA'
+    });
+    
+    if (response && response.hasMedia) {
+      const potentialTab = potentialMediaTabs.get(tabId);
+      if (potentialTab) {
+        potentialTab.status = 'has_media';
+        console.log(`Tab ${tabId} has media elements`);
+      }
+    }
+  } catch (error) {
+    // Tab not ready or no content script
+  }
+}
 
 // Browser compatibility layer
 const browserAPI = (function() {
@@ -58,17 +143,53 @@ teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, ''),
 };
 
 /**
+ * Check all existing tabs for potential media sites
+ */
+async function checkExistingTabs() {
+  try {
+    const tabs = await browserAPI.tabs.query({});
+    
+    for (const tab of tabs) {
+      if (!tab || !tab.id || !tab.url) continue;
+
+      // 1) Known media sites are immediately monitored
+      if (isPotentialMediaSite(tab.url)) {
+        addPotentialTab(tab.id, tab.url, tab.title);
+      }
+
+      // 2) Proactively detect media presence on any site
+      try {
+        const response = await browserAPI.tabs.sendMessage(tab.id, { type: 'CHECK_FOR_MEDIA' });
+        if (response && response.hasMedia) {
+          if (!potentialMediaTabs.has(tab.id)) {
+            addPotentialTab(tab.id, tab.url, tab.title);
+          }
+          const info = potentialMediaTabs.get(tab.id);
+          if (info && info.status !== 'playing') {
+            info.status = 'has_media';
+          }
+        }
+      } catch (e) {
+        // Tab may not be ready or cannot receive messages; ignore
+      }
+    }
+    
+    console.log(`Monitoring ${potentialMediaTabs.size} tabs for media`);
+  } catch (error) {
+    console.error('Error checking existing tabs:', error);
+  }
+}
+
+/**
  * Initialize extension when background script starts
  */
 async function initializeExtension() {
   // Log startup
-  console.log('UME - Ultimate Media Extention: Background script started');
+  console.log('UME - Ultimate Media Extention: Firefox background script started (Simple Proactive Mode)');
   
-  // FIXED: Don't clear existing media tabs on restart - preserve tracked tabs
-  // activeMediaTabs.clear(); // REMOVED - this was causing tabs to disappear!
-  // currentPlayingTab = null; // REMOVED - preserve current playing state
-  
-  console.log(`Preserving ${activeMediaTabs.size} existing media tabs across extension restart`);
+  // Preserve existing tabs but clear potential tabs (will be re-detected)
+  potentialMediaTabs.clear();
+  console.log(`Preserving ${activeMediaTabs.size} active media tabs`);
   
   // Ensure default settings are applied
   await ensureDefaultSettings();
@@ -81,9 +202,15 @@ async function initializeExtension() {
   
   // Set up tab event listeners
   setupTabListeners();
+  
+  // Check existing tabs for potential media sites
+  await checkExistingTabs();
+
+  // Start conservative cleanup loop
+  try { setupPeriodicCleanup(); } catch (e) { /* ignore */ }
 
   // Log initialization complete
-  console.log('UME - Ultimate Media Extention: Initialization complete');
+  console.log('UME - Ultimate Media Extention: Simple proactive initialization complete for Firefox');
 }
 
 /**
@@ -302,61 +429,78 @@ async function handleExtensionToggle(enabled) {
 }
 
 /**
- * Set up tab event listeners
+ * Set up simple proactive tab listeners  
  */
 function setupTabListeners() {
-  // Clean up when tab is closed
+  // Track new tabs
+  browserAPI.tabs.onCreated.addListener((tab) => {
+    if (!isExtensionEnabled || !tab.url) return;
+    
+    if (isPotentialMediaSite(tab.url)) {
+      addPotentialTab(tab.id, tab.url, tab.title);
+    }
+  });
+  
+  // Track tab updates (URL changes). Simpler rule: any URL change clears old tracking for that tab.
+  browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (!isExtensionEnabled) return;
+
+    if (changeInfo.url) {
+      // Remove any previous tracking for this tab on any URL change
+      if (potentialMediaTabs.has(tabId)) {
+        potentialMediaTabs.delete(tabId);
+      }
+      if (activeMediaTabs.has(tabId)) {
+        activeMediaTabs.delete(tabId);
+      }
+      if (currentPlayingTab === tabId) {
+        currentPlayingTab = null;
+      }
+
+      // If new URL is a known media site, start monitoring again
+      if (isPotentialMediaSite(changeInfo.url)) {
+        addPotentialTab(tabId, changeInfo.url, tab.title);
+      }
+
+      updateBadge();
+      notifyPopupStateChange();
+    }
+
+    // After load completes, proactively detect media on this tab regardless of known list
+    if (changeInfo.status === 'complete') {
+      (async () => {
+        try {
+          const response = await browserAPI.tabs.sendMessage(tabId, { type: 'CHECK_FOR_MEDIA' });
+          if (response && response.hasMedia) {
+            if (!potentialMediaTabs.has(tabId)) {
+              addPotentialTab(tabId, tab.url, tab.title);
+            }
+            const info = potentialMediaTabs.get(tabId);
+            if (info && info.status !== 'playing') {
+              info.status = 'has_media';
+              notifyPopupStateChange();
+              updateBadge();
+            }
+          }
+        } catch (e) {
+          // ignore messaging errors
+        }
+      })();
+    }
+  });
+  
+  // Clean up closed tabs
   browserAPI.tabs.onRemoved.addListener((tabId) => {
+    potentialMediaTabs.delete(tabId);
     if (activeMediaTabs.has(tabId)) {
       activeMediaTabs.delete(tabId);
       if (currentPlayingTab === tabId) {
         currentPlayingTab = null;
       }
-      updateBadge();
-      notifyPopupStateChange();
     }
+    updateBadge();
+    notifyPopupStateChange();
   });
-  
-  // Intelligent cleanup when tab is updated - only remove on actual navigation
-  browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url && activeMediaTabs.has(tabId)) {
-      const currentTabInfo = activeMediaTabs.get(tabId);
-      const currentUrl = new URL(currentTabInfo.url);
-      
-      try {
-        const newUrl = new URL(changeInfo.url);
-        
-        // Only remove if hostname changed (actual navigation to different site)
-        // Keep tracking for SPA routing, hash changes, query params, etc.
-        if (currentUrl.hostname !== newUrl.hostname) {
-          console.log(`Media tab ${tabId} navigated to different hostname: ${currentUrl.hostname} -> ${newUrl.hostname}`);
-          activeMediaTabs.delete(tabId);
-          if (currentPlayingTab === tabId) {
-            currentPlayingTab = null;
-          }
-          updateBadge();
-          notifyPopupStateChange();
-        } else {
-          // Same hostname - update URL but keep tracking
-          currentTabInfo.url = changeInfo.url;
-          currentTabInfo.timestamp = Date.now(); // Update activity timestamp
-          console.log(`Media tab ${tabId} URL updated on same hostname: ${changeInfo.url}`);
-        }
-      } catch (error) {
-        // If URL parsing fails, be conservative and remove the tab
-        console.warn(`Failed to parse URL for tab ${tabId}, removing from tracking:`, error);
-        activeMediaTabs.delete(tabId);
-        if (currentPlayingTab === tabId) {
-          currentPlayingTab = null;
-        }
-        updateBadge();
-        notifyPopupStateChange();
-      }
-    }
-  });
-  
-  // Set up periodic cleanup to remove truly stale tabs
-  setupPeriodicCleanup();
 }
 
 /**
@@ -387,13 +531,21 @@ function handleMediaStarted(tabId, tab, mediaInfo) {
     favIconUrl: null
   };
   
+  // Ensure tab is tracked in potential list even if it wasn't a known media site
+  if (!potentialMediaTabs.has(tabId)) {
+    addPotentialTab(tabId, safeTab.url, safeTab.title);
+  }
+  // Update potential tab status
+  potentialMediaTabs.get(tabId).status = 'playing';
+  
   // Update the active media tabs
   activeMediaTabs.set(tabId, {
     url: safeTab.url,
     title: safeTab.title,
     mediaType: mediaInfo.type,
     timestamp: Date.now(),
-    favicon: safeTab.favIconUrl
+    favicon: safeTab.favIconUrl,
+    isPlaying: true
   });
   
   console.log('DEBUG: activeMediaTabs.size after storing:', activeMediaTabs.size);
@@ -415,6 +567,16 @@ function handleMediaStarted(tabId, tab, mediaInfo) {
 function handleMediaPaused(tabId) {
   console.log(`Media paused in tab ${tabId}`);
   
+  // Update potential tab status if it exists
+  if (potentialMediaTabs.has(tabId)) {
+    potentialMediaTabs.get(tabId).status = 'paused';
+  }
+  
+  // Update active tab status
+  if (activeMediaTabs.has(tabId)) {
+    activeMediaTabs.get(tabId).isPlaying = false;
+  }
+  
   if (currentPlayingTab === tabId) {
     currentPlayingTab = null;
   }
@@ -432,10 +594,17 @@ function handleMediaPaused(tabId) {
 function handleMediaEnded(tabId) {
   console.log(`Media ended in tab ${tabId} - keeping tab tracked for potential replay`);
   
-  // FIXED: Don't remove the tab when media ends - this was causing simultaneous playback!
-  // activeMediaTabs.delete(tabId); // REMOVED - tabs should stay tracked
+  // Update potential tab status if it exists
+  if (potentialMediaTabs.has(tabId)) {
+    potentialMediaTabs.get(tabId).status = 'has_media'; // Media ended but still available
+  }
   
-  // Still clear the current playing tab to allow other tabs to play
+  // Update active tab status but keep it tracked
+  if (activeMediaTabs.has(tabId)) {
+    activeMediaTabs.get(tabId).isPlaying = false;
+  }
+  
+  // Clear the current playing tab to allow other tabs to play
   if (currentPlayingTab === tabId) {
     currentPlayingTab = null;
     console.log(`Cleared currentPlayingTab ${tabId} - other tabs can now play`);
@@ -451,9 +620,7 @@ function handleMediaEnded(tabId) {
  * Pause media in a specific tab
  */
 function pauseTabMedia(tabId) {
-  if (!tabId || !activeMediaTabs.has(tabId)) {
-    return;
-  }
+  if (!tabId) return;
   
   try {
     const result = browserAPI.tabs.sendMessage(tabId, {
@@ -528,9 +695,21 @@ function setTabVolume(tabId, volume) {
  * Update extension badge to show number of active media tabs
  */
 function updateBadge() {
-  const activeCount = activeMediaTabs.size;
-  const badgeText = activeCount > 0 ? activeCount.toString() : '';
-  const badgeColor = !isExtensionEnabled ? '#9CA3AF' : (currentPlayingTab ? '#10B981' : '#6B7280');
+  // Show potential media tabs count (includes both monitored and active)
+  const potentialCount = potentialMediaTabs.size;
+  const badgeText = potentialCount > 0 ? potentialCount.toString() : '';
+  
+  // Badge color based on status
+  let badgeColor = '#9CA3AF'; // Gray (disabled)
+  if (isExtensionEnabled) {
+    if (currentPlayingTab) {
+      badgeColor = '#10B981'; // Green (playing)
+    } else if (activeMediaTabs.size > 0) {
+      badgeColor = '#F59E0B'; // Orange (has media)
+    } else if (potentialCount > 0) {
+      badgeColor = '#6B7280'; // Gray-blue (monitoring)
+    }
+  }
   
   try {
     if (browserAPI.action) {
@@ -551,14 +730,36 @@ function updateBadge() {
  * Get current extension state (for popup)
  */
 function getExtensionState() {
-  return {
-    activeTabs: Array.from(activeMediaTabs.entries()).map(([tabId, info]) => ({
+  // Combine potential and active tabs for display
+  const allTabs = [];
+  
+  for (const [tabId, potentialInfo] of potentialMediaTabs.entries()) {
+    const activeInfo = activeMediaTabs.get(tabId);
+    const isPlaying = tabId === currentPlayingTab;
+    
+    allTabs.push({
       tabId,
-      ...info,
-      isPlaying: tabId === currentPlayingTab
-    })),
+      url: potentialInfo.url,
+      title: potentialInfo.title,
+      status: potentialInfo.status,
+      timestamp: potentialInfo.timestamp,
+      favicon: activeInfo?.favicon,
+      mediaType: activeInfo?.mediaType || 'potential',
+      isPlaying: isPlaying,
+      hasActiveMedia: activeInfo !== undefined
+    });
+  }
+  
+  // Sort by status: playing > has_media > monitoring
+  allTabs.sort((a, b) => {
+    const order = { playing: 0, has_media: 1, paused: 2, monitoring: 3 };
+    return order[a.status] - order[b.status];
+  });
+  
+  return {
+    activeTabs: allTabs, // Now shows ALL potential media tabs
     currentPlaying: currentPlayingTab,
-    totalTabs: activeMediaTabs.size,
+    totalTabs: potentialMediaTabs.size,
     extensionEnabled: isExtensionEnabled
   };
 }

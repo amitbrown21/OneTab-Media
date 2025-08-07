@@ -228,8 +228,8 @@
     console.log('DEBUG: activeTabs:', activeTabs);
     console.log('DEBUG: currentPlaying:', currentPlaying);
     
-    // Update status indicator
-    updateStatus(activeTabs.length, currentPlaying);
+    // Update status indicator  
+    updateStatus(activeTabs.length, currentPlaying, data);
     
     // Update tabs list
     updateTabsList(activeTabs, currentPlaying);
@@ -247,21 +247,26 @@
   /**
    * Update status indicator
    */
-  function updateStatus(activeCount, currentPlaying) {
+  function updateStatus(activeCount, currentPlaying, data) {
     if (!statusDot || !statusText) return;
+    
+    const totalTabs = data?.totalTabs || activeCount;
     
     if (!isExtensionEnabled) {
       statusDot.className = 'status-dot inactive';
       statusText.textContent = 'Extension disabled';
-    } else if (activeCount === 0) {
-      statusDot.className = 'status-dot inactive';
-      statusText.textContent = 'No active media';
     } else if (currentPlaying) {
       statusDot.className = 'status-dot active';
-      statusText.textContent = `Media playing (${activeCount} tab${activeCount !== 1 ? 's' : ''})`;
+      statusText.textContent = `Media playing (${totalTabs} site${totalTabs !== 1 ? 's' : ''} tracked)`;
+    } else if (activeCount > 0) {
+      statusDot.className = 'status-dot paused';
+      statusText.textContent = `Media available (${activeCount} of ${totalTabs})`;
+    } else if (totalTabs > 0) {
+      statusDot.className = 'status-dot monitoring';
+      statusText.textContent = `Monitoring ${totalTabs} media site${totalTabs !== 1 ? 's' : ''}`;
     } else {
       statusDot.className = 'status-dot inactive';
-      statusText.textContent = `${activeCount} tab${activeCount !== 1 ? 's' : ''} with media`;
+      statusText.textContent = 'No media sites detected';
     }
   }
   
@@ -297,9 +302,13 @@
    * Create a tab item element
    */
   function createTabItem(tabId, tabInfo, isPlaying) {
+    // Determine display status
+    const status = tabInfo.status || (isPlaying ? 'playing' : 'paused');
+    
     const tabItem = document.createElement('div');
-    tabItem.className = `tab-item ${isPlaying ? 'playing' : 'paused'} fade-in`;
+    tabItem.className = `tab-item ${status} fade-in`;
     tabItem.setAttribute('data-tab-id', tabId);
+    tabItem.setAttribute('data-status', status);
     
     // Create favicon
     let favicon = document.createElement('img');
@@ -340,14 +349,32 @@
     
     // Create status indicator
     const statusDiv = document.createElement('div');
-    statusDiv.className = `tab-status ${isPlaying ? 'playing' : 'paused'}`;
+    statusDiv.className = `tab-status ${status}`;
     
     const statusIcon = document.createElement('span');
-    statusIcon.textContent = isPlaying ? '▶️' : '⏸️';
-    
     const statusText = document.createElement('span');
-    const playbackRate = tabInfo.playbackRate || 1.0;
-    statusText.textContent = isPlaying ? `Playing (${playbackRate.toFixed(2)}x)` : 'Paused';
+    
+    // Set icon and text based on status
+    switch (status) {
+      case 'playing':
+        statusIcon.textContent = '▶️';
+        const playbackRate = tabInfo.playbackRate || 1.0;
+        statusText.textContent = `Playing (${playbackRate.toFixed(2)}x)`;
+        break;
+      case 'paused':
+        statusIcon.textContent = '⏸️';
+        statusText.textContent = 'Paused';
+        break;
+      case 'has_media':
+        statusIcon.textContent = '🎬';
+        statusText.textContent = 'Media available';
+        break;
+      case 'monitoring':
+      default:
+        statusIcon.textContent = '👁️';
+        statusText.textContent = 'Monitoring...';
+        break;
+    }
     
     statusDiv.appendChild(statusIcon);
     statusDiv.appendChild(statusText);

@@ -328,6 +328,14 @@ input:checked + .toggle-slider:before {
   animation: pulse-status 2s infinite;
 }
 
+.status-dot.monitoring {
+  background: var(--secondary-color);
+}
+
+.status-dot.paused {
+  background: var(--warning-color);
+}
+
 .status-dot.active::after {
   content: '';
   position: absolute;
@@ -427,6 +435,21 @@ input:checked + .toggle-slider:before {
 .tab-item.playing {
   border-color: var(--success-color);
   background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(40, 167, 69, 0.02) 100%);
+}
+
+.tab-item.paused {
+  border-color: var(--warning-color);
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 193, 7, 0.02) 100%);
+}
+
+.tab-item.has_media {
+  border-color: var(--info-color);
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.05) 0%, rgba(23, 162, 184, 0.02) 100%);
+}
+
+.tab-item.monitoring {
+  border-color: var(--secondary-color);
+  background: linear-gradient(135deg, rgba(108, 117, 125, 0.03) 0%, rgba(108, 117, 125, 0.01) 100%);
 }
 
 .tab-favicon {

@@ -1371,6 +1371,20 @@
           saveSpeedSettings();
           break;
           
+        case 'CHECK_FOR_MEDIA':
+          const mediaElements = document.querySelectorAll('video, audio');
+          const hasMedia = mediaElements.length > 0;
+          const mediaTypes = Array.from(mediaElements).map(el => el.tagName.toLowerCase());
+          
+          sendResponse({
+            hasMedia: hasMedia,
+            mediaCount: mediaElements.length,
+            mediaTypes: [...new Set(mediaTypes)], // Remove duplicates
+            videoCount: document.querySelectorAll('video').length,
+            audioCount: document.querySelectorAll('audio').length
+          });
+          return true;
+          
         default:
           console.warn('Unknown message type:', message.type);
       }
