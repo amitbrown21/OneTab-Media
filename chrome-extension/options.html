@@ -34,6 +34,10 @@
           <span class="nav-icon">🎨</span>
           <span class="nav-text">Appearance</span>
         </div>
+        <div class="nav-item" data-section="volume">
+          <span class="nav-icon">🔊</span>
+          <span class="nav-text">Volume Booster</span>
+        </div>
         <div class="nav-item" data-section="about">
           <span class="nav-icon">ℹ️</span>
           <span class="nav-text">About</span>
@@ -190,6 +194,56 @@
           </div>
         </section>
 
+        <!-- Volume Booster Section -->
+        <section id="volume" class="settings-section">
+          <div class="section-header">
+            <h2>Volume Booster</h2>
+            <p>Enhance audio volume beyond browser limits</p>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="volumeBoosterEnabled" class="setting-label">Enable Volume Booster</label>
+                <p class="setting-description">Boost audio volume beyond 100% on supported websites</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="volumeBoosterEnabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="globalVolume" class="setting-label">Global Volume Multiplier</label>
+                <p class="setting-description">Default volume boost (1.0x - 5.0x)</p>
+              </div>
+              <div class="setting-control">
+                <input type="number" id="globalVolume" min="0.1" max="5.0" step="0.1" value="1.0" class="speed-input" />
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label for="volumeBoostLimit" class="setting-label">Maximum Volume Boost</label>
+                <p class="setting-description">Safety limit to prevent ear damage (1.0x - 5.0x)</p>
+              </div>
+              <div class="setting-control">
+                <input type="number" id="volumeBoostLimit" min="1.0" max="5.0" step="0.1" value="5.0" class="speed-input" />
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">⚠️ Safety Warning</label>
+                <p class="setting-description">High volume levels can damage your hearing. Use responsibly and ensure your audio equipment can handle the increased volume. The extension is not responsible for hearing damage or equipment damage.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- About Section -->
         <section id="about" class="settings-section">
           <div class="section-header">
@@ -205,7 +259,12 @@
 
             <div class="feature-card">
               <h3>⚡ Speed Control</h3>
-              <p>Control playback speed with keyboard shortcuts or the visual overlay that appears when you hover over videos.</p>
+              <p>Control playback speed with keyboard shortcuts or the visual overlay that appears when you hover over videos. Features include speed adjustment, rewind/advance, and marker functionality just like the original Video Speed Controller.</p>
+            </div>
+
+            <div class="feature-card">
+              <h3>🔊 Volume Booster</h3>
+              <p>Boost audio volume beyond browser limits with per-domain settings and safety controls. Remembers your volume preferences for each website.</p>
             </div>
 
             <div class="feature-card">

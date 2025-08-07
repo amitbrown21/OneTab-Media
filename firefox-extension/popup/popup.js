@@ -22,13 +22,17 @@
   let statusDot, statusText, tabsList, noTabsMessage, pauseAllButton, refreshButton;
   let extensionToggle, toggleLabel, footerStatus, popupContainer;
   let speedControlSection, currentSpeedDisplay;
+  let volumeControlSection, currentVolumeDisplay, volumeSlider;
+  let volumeUpBtn, volumeDownBtn, volumeResetBtn;
   let optionsButton;
   
   // State
   let currentTabs = [];
   let isExtensionEnabled = true;
   let currentSpeed = 1.0;
+  let currentVolume = 1.0; // Volume multiplier (1.0 = 100%)
   let speedSettings = {};
+  let volumeSettings = {};
   
   /**
    * Initialize popup when DOM is loaded
@@ -45,6 +49,9 @@
     
     // Load initial data
     loadTabsData();
+    
+    // Load volume settings
+    loadVolumeSettings();
     
     // Listen for changes from background script
     setupBackgroundListener();
@@ -68,6 +75,15 @@
     // Speed control elements
     speedControlSection = document.getElementById('speedControlSection');
     currentSpeedDisplay = document.getElementById('currentSpeed');
+    
+    // Volume control elements
+    volumeControlSection = document.getElementById('volumeControlSection');
+    currentVolumeDisplay = document.getElementById('currentVolume');
+    volumeSlider = document.getElementById('volumeSlider');
+    volumeUpBtn = document.getElementById('volumeUpBtn');
+    volumeDownBtn = document.getElementById('volumeDownBtn');
+    volumeResetBtn = document.getElementById('volumeResetBtn');
+    
     optionsButton = document.getElementById('optionsButton');
   }
   
@@ -87,10 +103,17 @@
     // Extension toggle
     extensionToggle?.addEventListener('change', handleExtensionToggle);
     
+    // Volume control event listeners
+    volumeSlider?.addEventListener('input', handleVolumeSliderChange);
+    volumeUpBtn?.addEventListener('click', handleVolumeUp);
+    volumeDownBtn?.addEventListener('click', handleVolumeDown);
+    volumeResetBtn?.addEventListener('click', handleVolumeReset);
+    
     // Refresh when popup becomes visible (user opens it)
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         loadTabsData();
+        loadVolumeSettings();
       }
     });
   }
@@ -216,6 +239,9 @@
     
     // Update speed controls
     updateSpeedControls(activeTabs);
+    
+    // Update volume controls
+    updateVolumeControls(activeTabs);
   }
   
   /**
@@ -618,6 +644,313 @@
     setTimeout(() => {
       errorDiv.remove();
     }, 3000);
+  }
+
+  /**
+   * Load volume settings from storage and current tabs
+   */
+  async function loadVolumeSettings() {
+    try {
+      // Get volume settings from storage
+      let result;
+      if (typeof browser !== 'undefined' && browser.storage) {
+        result = await browser.storage.sync.get(['globalVolume', 'perDomainVolume', 'volumeBoosterEnabled']);
+      } else if (typeof chrome !== 'undefined' && chrome.storage) {
+        result = await new Promise((resolve, reject) => {
+          chrome.storage.sync.get(['globalVolume', 'perDomainVolume', 'volumeBoosterEnabled'], (data) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(data);
+            }
+          });
+        });
+      } else {
+        throw new Error('No storage API available');
+      }
+      
+      volumeSettings = {
+        globalVolume: result.globalVolume || 1.0,
+        perDomainVolume: result.perDomainVolume || {},
+        volumeBoosterEnabled: result.volumeBoosterEnabled !== false
+      };
+      
+      // Get current active tab's domain volume
+      await updateCurrentVolumeDisplay();
+      
+    } catch (error) {
+      console.error('Failed to load volume settings:', error);
+      volumeSettings = { globalVolume: 1.0, perDomainVolume: {}, volumeBoosterEnabled: true };
+      updateCurrentVolumeDisplay();
+    }
+  }
+
+  /**
+   * Update current volume display based on active tab
+   */
+  async function updateCurrentVolumeDisplay() {
+    try {
+      // Get the current active tab's domain
+      let tabs;
+      if (typeof browser !== 'undefined' && browser.tabs) {
+        tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      } else if (typeof chrome !== 'undefined' && chrome.tabs) {
+        tabs = await new Promise((resolve, reject) => {
+          chrome.tabs.query({ active: true, currentWindow: true }, (result) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(result);
+            }
+          });
+        });
+      } else {
+        throw new Error('No tabs API available');
+      }
+      
+      if (tabs && tabs.length > 0) {
+        const currentTab = tabs[0];
+        const hostname = new URL(currentTab.url).hostname;
+        
+        // Get domain-specific volume or fall back to global
+        const domainVolume = volumeSettings.perDomainVolume[hostname] || volumeSettings.globalVolume;
+        
+        updateVolumeDisplay(domainVolume);
+      } else {
+        updateVolumeDisplay(volumeSettings.globalVolume);
+      }
+    } catch (error) {
+      console.error('Failed to get current tab domain:', error);
+      updateVolumeDisplay(volumeSettings.globalVolume);
+    }
+  }
+
+  /**
+   * Update volume display in the popup
+   */
+  function updateVolumeDisplay(volume) {
+    currentVolume = volume;
+    
+    if (currentVolumeDisplay) {
+      currentVolumeDisplay.textContent = `${(volume * 100).toFixed(0)}%`;
+    }
+    
+    if (volumeSlider) {
+      volumeSlider.value = volume * 100; // Convert to percentage
+    }
+    
+    // Update volume control section visibility based on settings
+    if (volumeControlSection) {
+      if (volumeSettings.volumeBoosterEnabled && currentTabs.length > 0) {
+        volumeControlSection.classList.remove('disabled');
+      } else {
+        volumeControlSection.classList.add('disabled');
+      }
+    }
+  }
+
+  /**
+   * Handle volume slider change
+   */
+  async function handleVolumeSliderChange() {
+    const newVolumePercent = parseInt(volumeSlider.value);
+    const newVolume = newVolumePercent / 100; // Convert to multiplier
+    
+    await setActiveTabVolume(newVolume);
+    updateVolumeDisplay(newVolume);
+  }
+
+  /**
+   * Handle volume up button click
+   */
+  async function handleVolumeUp() {
+    const newVolume = Math.min(currentVolume + 0.1, 5.0); // Max 500%
+    await setActiveTabVolume(newVolume);
+    updateVolumeDisplay(newVolume);
+  }
+
+  /**
+   * Handle volume down button click
+   */
+  async function handleVolumeDown() {
+    const newVolume = Math.max(currentVolume - 0.1, 0.1); // Min 10%
+    await setActiveTabVolume(newVolume);
+    updateVolumeDisplay(newVolume);
+  }
+
+  /**
+   * Handle volume reset button click
+   */
+  async function handleVolumeReset() {
+    const resetVolume = 1.0; // 100%
+    await setActiveTabVolume(resetVolume);
+    updateVolumeDisplay(resetVolume);
+  }
+
+  /**
+   * Set volume for the active tab
+   */
+  async function setActiveTabVolume(volume) {
+    try {
+      console.log('setActiveTabVolume called with volume:', volume);
+      
+      // Check if browserAPI is available
+      if (!browserAPI || !browserAPI.tabs) {
+        console.error('Browser API not available');
+        showError('Browser extension API not available');
+        return;
+      }
+      
+      console.log('Querying for active tab...');
+      
+      // Get the current active tab with better error handling
+      let tabs;
+      try {
+        // Handle both Promise-based (Firefox) and callback-based (Chrome) APIs
+        if (typeof browser !== 'undefined' && browser.tabs) {
+          // Firefox - returns a Promise
+          tabs = await browser.tabs.query({ active: true, currentWindow: true });
+        } else if (typeof chrome !== 'undefined' && chrome.tabs) {
+          // Chrome - use callback wrapped in Promise
+          tabs = await new Promise((resolve, reject) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (result) => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else {
+                resolve(result);
+              }
+            });
+          });
+        } else {
+          throw new Error('No browser tabs API available');
+        }
+      } catch (queryError) {
+        console.error('Failed to query tabs:', queryError);
+        showError('Failed to access browser tabs: ' + queryError.message);
+        return;
+      }
+      
+      console.log('Tabs query result:', tabs, 'Type:', typeof tabs, 'IsArray:', Array.isArray(tabs));
+      
+      if (!tabs || !Array.isArray(tabs)) {
+        console.error('Invalid tabs result:', tabs);
+        showError('Failed to get active tab - invalid response');
+        return;
+      }
+      
+      if (tabs.length === 0) {
+        console.warn('No active tab found for volume control');
+        showError('No active tab found');
+        return;
+      }
+      
+      const activeTab = tabs[0];
+      console.log('Active tab found:', activeTab);
+      
+      // Validate tab
+      if (!activeTab.id) {
+        console.error('Active tab has no ID');
+        showError('Invalid active tab');
+        return;
+      }
+      
+      // Validate URL
+      if (!activeTab.url || activeTab.url.startsWith('chrome://') || activeTab.url.startsWith('about://') || activeTab.url.startsWith('moz-extension://')) {
+        console.warn('Cannot control volume on system pages:', activeTab.url);
+        showError('Cannot control volume on this page');
+        return;
+      }
+      
+      const hostname = new URL(activeTab.url).hostname;
+      
+      console.log(`Attempting to set volume to ${volume} for tab ${activeTab.id} (${hostname})`);
+      
+      // Send message DIRECTLY to content script in the specific tab
+      let response;
+      try {
+        // Handle both Promise-based (Firefox) and callback-based (Chrome) APIs
+        if (typeof browser !== 'undefined' && browser.tabs) {
+          // Firefox - returns a Promise
+          response = await browser.tabs.sendMessage(activeTab.id, {
+            type: 'SET_VOLUME',
+            volume: volume
+          });
+        } else if (typeof chrome !== 'undefined' && chrome.tabs) {
+          // Chrome - use callback wrapped in Promise
+          response = await new Promise((resolve, reject) => {
+            chrome.tabs.sendMessage(activeTab.id, {
+              type: 'SET_VOLUME',
+              volume: volume
+            }, (result) => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else {
+                resolve(result);
+              }
+            });
+          });
+        } else {
+          throw new Error('No browser messaging API available');
+        }
+      } catch (messageError) {
+        console.error('Failed to send message to content script:', messageError);
+        showError('Could not communicate with page. Try refreshing the page.');
+        return;
+      }
+      
+      console.log('Volume change response:', response);
+      
+      if (response && response.success) {
+        // Update stored volume settings
+        volumeSettings.perDomainVolume[hostname] = volume;
+        
+        // Save to storage
+        if (typeof browser !== 'undefined' && browser.storage) {
+          await browser.storage.sync.set({
+            perDomainVolume: volumeSettings.perDomainVolume
+          });
+        } else if (typeof chrome !== 'undefined' && chrome.storage) {
+          await new Promise((resolve, reject) => {
+            chrome.storage.sync.set({
+              perDomainVolume: volumeSettings.perDomainVolume
+            }, () => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else {
+                resolve();
+              }
+            });
+          });
+        }
+        
+        console.log(`Volume successfully set to ${(volume * 100).toFixed(0)}% for ${hostname}`);
+      } else {
+        console.error('Failed to set volume:', response?.error || 'Unknown error');
+        showError('Failed to change volume: ' + (response?.error || 'Unknown error'));
+      }
+      
+    } catch (error) {
+      console.error('Failed to set tab volume:', error);
+      showError('Failed to change volume: ' + error.message);
+    }
+  }
+
+  /**
+   * Update volume controls based on current tab data
+   */
+  function updateVolumeControls(tabs) {
+    if (!volumeControlSection) return;
+    
+    const hasActiveMedia = tabs.length > 0;
+    const isVolumeEnabled = volumeSettings.volumeBoosterEnabled;
+    
+    // Show/hide volume controls based on media presence and settings
+    if (hasActiveMedia && isVolumeEnabled) {
+      volumeControlSection.classList.remove('disabled');
+      updateCurrentVolumeDisplay();
+    } else {
+      volumeControlSection.classList.add('disabled');
+    }
   }
 
   

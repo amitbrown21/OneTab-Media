@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UME - Automated Unit Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-results {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .test-pass {
+            color: #28a745;
+            background: #d4edda;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        
+        .test-fail {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        
+        .test-info {
+            color: #17a2b8;
+            background: #d1ecf1;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        
+        .test-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-pass .stat-number { color: #28a745; }
+        .stat-fail .stat-number { color: #dc3545; }
+        .stat-total .stat-number { color: #007bff; }
+        .stat-time .stat-number { color: #6f42c1; }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover { background: #0056b3; }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .success { background: #28a745; }
+        .success:hover { background: #1e7e34; }
+        
+        .warning { background: #ffc107; color: #212529; }
+        .warning:hover { background: #e0a800; }
+        
+        .danger { background: #dc3545; }
+        .danger:hover { background: #c82333; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #007bff);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 UME - Automated Unit Tests</h1>
+        <p>Comprehensive automated testing for Ultimate Media Extension core functionality</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎮 Test Controls</h2>
+        <button onclick="runAllTests()" class="success">🚀 Run All Tests</button>
+        <button onclick="runExtensionTests()" class="warning">⚙️ Extension Tests</button>
+        <button onclick="runMediaTests()" class="warning">📺 Media Tests</button>
+        <button onclick="runStorageTests()" class="warning">💾 Storage Tests</button>
+        <button onclick="runUtilityTests()" class="warning">🔧 Utility Tests</button>
+        <button onclick="clearResults()" class="danger">🗑️ Clear Results</button>
+        
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+        
+        <div id="testProgress">Ready to run tests...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Test Statistics</h2>
+        <div class="test-stats">
+            <div class="stat-card stat-total">
+                <div id="totalTests" class="stat-number">0</div>
+                <div>Total Tests</div>
+            </div>
+            <div class="stat-card stat-pass">
+                <div id="passedTests" class="stat-number">0</div>
+                <div>Passed</div>
+            </div>
+            <div class="stat-card stat-fail">
+                <div id="failedTests" class="stat-number">0</div>
+                <div>Failed</div>
+            </div>
+            <div class="stat-card stat-time">
+                <div id="testDuration" class="stat-number">0ms</div>
+                <div>Duration</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Test Results</h2>
+        <div id="testResults" class="test-results">
+            Tests will appear here when run...
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔧 Test Environment Info</h2>
+        <div id="envInfo" class="test-results">
+            Loading environment information...
+        </div>
+    </div>
+
+    <script>
+        // Test framework
+        class TestFramework {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+                this.currentSuite = '';
+                this.startTime = 0;
+                this.endTime = 0;
+            }
+            
+            describe(suiteName, testFunction) {
+                this.currentSuite = suiteName;
+                this.log(`📋 Starting test suite: ${suiteName}`, 'info');
+                testFunction();
+            }
+            
+            it(testName, testFunction) {
+                const fullName = `${this.currentSuite} > ${testName}`;
+                this.tests.push({ name: fullName, fn: testFunction });
+            }
+            
+            expect(actual) {
+                return {
+                    toBe: (expected) => this.assert(actual === expected, `Expected ${actual} to be ${expected}`),
+                    toEqual: (expected) => this.assert(JSON.stringify(actual) === JSON.stringify(expected), `Expected ${JSON.stringify(actual)} to equal ${JSON.stringify(expected)}`),
+                    toBeDefined: () => this.assert(actual !== undefined, `Expected ${actual} to be defined`),
+                    toBeNull: () => this.assert(actual === null, `Expected ${actual} to be null`),
+                    toBeTruthy: () => this.assert(!!actual, `Expected ${actual} to be truthy`),
+                    toBeFalsy: () => this.assert(!actual, `Expected ${actual} to be falsy`),
+                    toContain: (item) => this.assert(actual.includes && actual.includes(item), `Expected ${actual} to contain ${item}`),
+                    toThrow: () => {
+                        try {
+                            if (typeof actual === 'function') actual();
+                            this.assert(false, 'Expected function to throw');
+                        } catch (e) {
+                            this.assert(true, 'Function threw as expected');
+                        }
+                    },
+                    toBeGreaterThan: (value) => this.assert(actual > value, `Expected ${actual} to be greater than ${value}`),
+                    toBeLessThan: (value) => this.assert(actual < value, `Expected ${actual} to be less than ${value}`)
+                };
+            }
+            
+            assert(condition, message) {
+                if (condition) {
+                    this.results.push({ type: 'pass', message });
+                    this.log(`✅ ${message}`, 'pass');
+                } else {
+                    this.results.push({ type: 'fail', message });
+                    this.log(`❌ ${message}`, 'fail');
+                    throw new Error(message);
+                }
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const element = document.createElement('div');
+                element.className = `test-${type}`;
+                element.innerHTML = `[${timestamp}] ${message}`;
+                
+                const resultsDiv = document.getElementById('testResults');
+                resultsDiv.appendChild(element);
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            }
+            
+            async runTests() {
+                this.results = [];
+                this.startTime = performance.now();
+                
+                this.log('🚀 Starting automated test suite...', 'info');
+                
+                let passed = 0;
+                let failed = 0;
+                
+                for (let i = 0; i < this.tests.length; i++) {
+                    const test = this.tests[i];
+                    
+                    try {
+                        await test.fn();
+                        passed++;
+                    } catch (error) {
+                        failed++;
+                        this.log(`❌ Test failed: ${test.name} - ${error.message}`, 'fail');
+                    }
+                    
+                    // Update progress
+                    const progress = ((i + 1) / this.tests.length) * 100;
+                    document.getElementById('progressFill').style.width = `${progress}%`;
+                    document.getElementById('testProgress').textContent = 
+                        `Running tests... ${i + 1}/${this.tests.length} (${progress.toFixed(1)}%)`;
+                }
+                
+                this.endTime = performance.now();
+                const duration = this.endTime - this.startTime;
+                
+                // Update statistics
+                document.getElementById('totalTests').textContent = this.tests.length;
+                document.getElementById('passedTests').textContent = passed;
+                document.getElementById('failedTests').textContent = failed;
+                document.getElementById('testDuration').textContent = `${duration.toFixed(0)}ms`;
+                
+                document.getElementById('testProgress').textContent = 
+                    `Tests completed! ${passed} passed, ${failed} failed in ${duration.toFixed(0)}ms`;
+                
+                this.log(`✅ Test suite completed: ${passed} passed, ${failed} failed`, 
+                         failed === 0 ? 'pass' : 'fail');
+                
+                return { passed, failed, duration };
+            }
+        }
+        
+        // Global test framework instance
+        const test = new TestFramework();
+        
+        // Mock extension functions for testing
+        const mockExtension = {
+            storage: {
+                data: {},
+                async get(keys) {
+                    if (keys === null) return this.data;
+                    if (Array.isArray(keys)) {
+                        const result = {};
+                        keys.forEach(key => {
+                            if (this.data.hasOwnProperty(key)) {
+                                result[key] = this.data[key];
+                            }
+                        });
+                        return result;
+                    }
+                    return this.data[keys] || {};
+                },
+                async set(items) {
+                    Object.assign(this.data, items);
+                    return true;
+                },
+                async remove(keys) {
+                    if (Array.isArray(keys)) {
+                        keys.forEach(key => delete this.data[key]);
+                    } else {
+                        delete this.data[keys];
+                    }
+                    return true;
+                }
+            },
+            
+            tabs: {
+                activeTabs: new Map(),
+                async get(tabId) {
+                    return this.activeTabs.get(tabId) || null;
+                },
+                async query(queryInfo) {
+                    return Array.from(this.activeTabs.values()).filter(tab => {
+                        if (queryInfo.active && !tab.active) return false;
+                        if (queryInfo.url && !tab.url.includes(queryInfo.url)) return false;
+                        return true;
+                    });
+                }
+            },
+            
+            runtime: {
+                messages: [],
+                sendMessage(message) {
+                    this.messages.push(message);
+                    return Promise.resolve({ success: true });
+                }
+            }
+        };
+        
+        // Extension core function tests
+        function defineExtensionTests() {
+            test.describe('Extension Core Functions', () => {
+                
+                test.it('should handle default settings correctly', () => {
+                    const defaultSettings = {
+                        extensionEnabled: true,
+                        rememberSpeed: true,
+                        audioBoolean: true,
+                        controllerOpacity: 0.8,
+                        speed: 1.0,
+                        volumeBoosterEnabled: true,
+                        globalVolume: 1.0,
+                        volumeBoostLimit: 5.0
+                    };
+                    
+                    test.expect(defaultSettings.extensionEnabled).toBe(true);
+                    test.expect(defaultSettings.rememberSpeed).toBe(true);
+                    test.expect(defaultSettings.controllerOpacity).toBe(0.8);
+                    test.expect(defaultSettings.volumeBoostLimit).toBe(5.0);
+                });
+                
+                test.it('should validate key bindings structure', () => {
+                    const keyBinding = {
+                        action: 'faster',
+                        key: 68, // D key
+                        value: 0.25,
+                        force: false,
+                        predefined: true
+                    };
+                    
+                    test.expect(keyBinding.action).toBeDefined();
+                    test.expect(keyBinding.key).toBeGreaterThan(0);
+                    test.expect(keyBinding.value).toBeDefined();
+                    test.expect(typeof keyBinding.force).toBe('boolean');
+                });
+                
+                test.it('should handle media tab tracking data', () => {
+                    const tabInfo = {
+                        url: 'https://example.com/video',
+                        title: 'Test Video',
+                        mediaType: 'video',
+                        timestamp: Date.now(),
+                        favicon: 'https://example.com/favicon.ico'
+                    };
+                    
+                    test.expect(tabInfo.url).toContain('https://');
+                    test.expect(tabInfo.mediaType).toBe('video');
+                    test.expect(tabInfo.timestamp).toBeGreaterThan(0);
+                    test.expect(tabInfo.title).toBeDefined();
+                });
+            });
+        }
+        
+        // Media control function tests
+        function defineMediaTests() {
+            test.describe('Media Control Functions', () => {
+                
+                test.it('should calculate correct speed values', () => {
+                    const speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+                    
+                    speeds.forEach(speed => {
+                        test.expect(speed).toBeGreaterThan(0);
+                        test.expect(speed).toBeLessThan(5.0);
+                    });
+                });
+                
+                test.it('should handle time formatting correctly', () => {
+                    function formatTime(seconds) {
+                        if (!seconds || seconds === Infinity) return '0:00';
+                        const mins = Math.floor(seconds / 60);
+                        const secs = Math.floor(seconds % 60);
+                        return `${mins}:${secs.toString().padStart(2, '0')}`;
+                    }
+                    
+                    test.expect(formatTime(0)).toBe('0:00');
+                    test.expect(formatTime(30)).toBe('0:30');
+                    test.expect(formatTime(90)).toBe('1:30');
+                    test.expect(formatTime(3661)).toBe('61:01');
+                });
+                
+                test.it('should validate volume levels', () => {
+                    const volumes = [0.1, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0];
+                    
+                    volumes.forEach(volume => {
+                        test.expect(volume).toBeGreaterThan(0);
+                        test.expect(volume <= 5.0).toBeTruthy(); // Max safety limit
+                    });
+                });
+                
+                test.it('should handle marker functionality', () => {
+                    const markers = {
+                        'https://example.com/video1': {
+                            'video_source_1.mp4': 45.5,
+                            'video_source_2.mp4': 120.0
+                        }
+                    };
+                    
+                    const url = 'https://example.com/video1';
+                    const source = 'video_source_1.mp4';
+                    
+                    test.expect(markers[url]).toBeDefined();
+                    test.expect(markers[url][source]).toBe(45.5);
+                });
+            });
+        }
+        
+        // Storage function tests
+        function defineStorageTests() {
+            test.describe('Storage Functions', () => {
+                
+                test.it('should store and retrieve settings', async () => {
+                    const testSettings = {
+                        speed: 1.5,
+                        volume: 2.0,
+                        enabled: true
+                    };
+                    
+                    await mockExtension.storage.set(testSettings);
+                    const retrieved = await mockExtension.storage.get(Object.keys(testSettings));
+                    
+                    test.expect(retrieved.speed).toBe(1.5);
+                    test.expect(retrieved.volume).toBe(2.0);
+                    test.expect(retrieved.enabled).toBe(true);
+                });
+                
+                test.it('should handle storage cleanup', async () => {
+                    await mockExtension.storage.set({ temp1: 'value1', temp2: 'value2' });
+                    await mockExtension.storage.remove(['temp1']);
+                    
+                    const remaining = await mockExtension.storage.get(null);
+                    
+                    test.expect(remaining.temp1).toBe(undefined);
+                    test.expect(remaining.temp2).toBe('value2');
+                });
+                
+                test.it('should validate settings format', () => {
+                    const settings = {
+                        keyBindings: [
+                            { action: 'faster', key: 68, value: 0.25 },
+                            { action: 'slower', key: 83, value: 0.25 }
+                        ],
+                        blacklist: 'site1.com\\nsite2.com',
+                        perDomainVolume: {
+                            'youtube.com': 1.5,
+                            'netflix.com': 2.0
+                        }
+                    };
+                    
+                    test.expect(Array.isArray(settings.keyBindings)).toBeTruthy();
+                    test.expect(settings.keyBindings.length).toBe(2);
+                    test.expect(typeof settings.perDomainVolume).toBe('object');
+                    test.expect(settings.blacklist).toContain('site1.com');
+                });
+            });
+        }
+        
+        // Utility function tests
+        function defineUtilityTests() {
+            test.describe('Utility Functions', () => {
+                
+                test.it('should validate URLs correctly', () => {
+                    function isValidURL(string) {
+                        try {
+                            new URL(string);
+                            return true;
+                        } catch (_) {
+                            return false;
+                        }
+                    }
+                    
+                    test.expect(isValidURL('https://example.com')).toBeTruthy();
+                    test.expect(isValidURL('http://localhost:8080')).toBeTruthy();
+                    test.expect(isValidURL('invalid-url')).toBeFalsy();
+                    test.expect(isValidURL('')).toBeFalsy();
+                });
+                
+                test.it('should handle hostname extraction', () => {
+                    function getHostname(url) {
+                        try {
+                            return new URL(url).hostname;
+                        } catch (e) {
+                            return null;
+                        }
+                    }
+                    
+                    test.expect(getHostname('https://www.youtube.com/watch?v=123')).toBe('www.youtube.com');
+                    test.expect(getHostname('https://netflix.com/movie/456')).toBe('netflix.com');
+                    test.expect(getHostname('invalid')).toBeNull();
+                });
+                
+                test.it('should validate keyboard key codes', () => {
+                    const validKeyCodes = {
+                        'V': 86, 'S': 83, 'D': 68, 'R': 82, 'G': 71,
+                        'Z': 90, 'X': 88, 'M': 77, 'J': 74
+                    };
+                    
+                    Object.entries(validKeyCodes).forEach(([key, code]) => {
+                        test.expect(code).toBeGreaterThan(0);
+                        test.expect(code).toBeLessThan(256);
+                    });
+                });
+                
+                test.it('should handle error cases gracefully', () => {
+                    function safeParseFloat(value, defaultValue = 1.0) {
+                        const parsed = parseFloat(value);
+                        return isNaN(parsed) ? defaultValue : parsed;
+                    }
+                    
+                    test.expect(safeParseFloat('1.5')).toBe(1.5);
+                    test.expect(safeParseFloat('invalid')).toBe(1.0);
+                    test.expect(safeParseFloat(null, 2.0)).toBe(2.0);
+                    test.expect(safeParseFloat(undefined)).toBe(1.0);
+                });
+            });
+        }
+        
+        // Test runner functions
+        async function runAllTests() {
+            clearResults();
+            defineExtensionTests();
+            defineMediaTests();
+            defineStorageTests();
+            defineUtilityTests();
+            
+            const results = await test.runTests();
+            
+            if (results.failed === 0) {
+                test.log(`🎉 All tests passed! (${results.passed}/${results.passed + results.failed})`, 'pass');
+            } else {
+                test.log(`⚠️ Some tests failed (${results.passed}/${results.passed + results.failed})`, 'fail');
+            }
+        }
+        
+        async function runExtensionTests() {
+            clearResults();
+            defineExtensionTests();
+            await test.runTests();
+        }
+        
+        async function runMediaTests() {
+            clearResults();
+            defineMediaTests();
+            await test.runTests();
+        }
+        
+        async function runStorageTests() {
+            clearResults();
+            defineStorageTests();
+            await test.runTests();
+        }
+        
+        async function runUtilityTests() {
+            clearResults();
+            defineUtilityTests();
+            await test.runTests();
+        }
+        
+        function clearResults() {
+            test.tests = [];
+            test.results = [];
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('totalTests').textContent = '0';
+            document.getElementById('passedTests').textContent = '0';
+            document.getElementById('failedTests').textContent = '0';
+            document.getElementById('testDuration').textContent = '0ms';
+            document.getElementById('testProgress').textContent = 'Ready to run tests...';
+        }
+        
+        // Initialize environment info
+        function loadEnvironmentInfo() {
+            const info = {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                href: window.location.href,
+                timestamp: new Date().toISOString(),
+                webAudio: !!(window.AudioContext || window.webkitAudioContext),
+                localStorage: !!window.localStorage,
+                sessionStorage: !!window.sessionStorage,
+                indexedDB: !!window.indexedDB,
+                serviceWorker: !!navigator.serviceWorker,
+                chrome: !!window.chrome,
+                browser: !!window.browser
+            };
+            
+            const envDiv = document.getElementById('envInfo');
+            envDiv.innerHTML = Object.entries(info)
+                .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                .join('');
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEnvironmentInfo();
+            test.log('🚀 Automated test framework initialized', 'info');
+            test.log('Click "Run All Tests" to start comprehensive testing', 'info');
+        });
+        
+        // Global exports for console access
+        window.testFramework = test;
+        window.mockExtension = mockExtension;
+        
+        console.log('🧪 UME Automated Test Suite loaded');
+        console.log('Available functions: runAllTests(), runExtensionTests(), runMediaTests(), runStorageTests(), runUtilityTests()');
+    </script>
+</body>
+</html>

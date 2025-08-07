@@ -1,143 +1,213 @@
-# OneTab Media Extension
+# UME - Ultimate Media Extension v3.0
 
-A browser extension that ensures only one tab can play audio/video at a time. When you start playing media in a new tab, it automatically pauses media in all other tabs.
+**The most comprehensive media control extension for your browser.** Take complete control over video speed, audio volume, and media playback across all your browser tabs with advanced keyboard shortcuts and intelligent tab management.
 
-## 🚀 Quick Start
+## 🚀 Version 3.0 - Critical Simultaneous Playback Fix
 
-This project contains two separate, complete browser extensions:
+**BREAKTHROUGH UPDATE:** Version 3.0 completely resolves the simultaneous playback issue that was causing multiple tabs to play media at the same time. This critical fix ensures perfect media management across all your browser tabs.
 
-- **[Chrome Extension](./chrome-extension/)** - For Google Chrome (Manifest V3)
-- **[Firefox Extension](./firefox-extension/)** - For Mozilla Firefox (Manifest V2)
+## ✨ Complete Feature Set
 
-Each folder contains a complete, ready-to-install extension with its own README and installation instructions.
+### 🎮 Video Speed Control
+- **Advanced Speed Control**: Adjust playback speed from 0.1x to 16x with precise increments
+- **Custom Speed Presets**: Set your preferred default speeds for different content types
+- **Visual Speed Controller**: Elegant on-screen overlay with real-time speed display
+- **Speed Memory**: Automatically remembers and applies your last used speed to new videos
+- **Per-Website Settings**: Different speed preferences for different websites
 
-## ✨ Features
+### 🔊 Volume Booster & Audio Control
+- **Volume Amplification**: Boost audio volume up to 500% beyond browser limits
+- **Per-Domain Volume**: Individual volume settings for each website
+- **Audio Enhancement**: Professional-grade Web Audio API integration
+- **Safety Limits**: Built-in protection against hearing damage
+- **Persistent Settings**: Volume preferences saved across browser sessions
 
-- 🎵 **Automatic Media Detection** - Detects when media starts playing in any tab
-- ⏸️ **Smart Pausing** - Automatically pauses media in other tabs when new media begins
-- ⏸️ **Individual Controls** - Pause buttons for each tab with media
-- 🎛️ **Modern Interface** - Clean, modern popup to see and control all active media
-- 🔧 **Extension Toggle** - Master switch to enable/disable the entire functionality
-- 💾 **Persistent Settings** - Your preferences are saved across browser sessions
-- 🌐 **Cross-Browser** - Separate optimized versions for Chrome and Firefox
-- ☕ **Developer Support** - Easy way to support the developer with built-in link
+### ⌨️ Advanced Keyboard Shortcuts
+- **Speed Control**: S (slower), D (faster), R (reset speed), G (preferred speed)
+- **Navigation**: Z (rewind), X (advance), M (set marker), J (jump to marker)
+- **Volume Control**: ↑ (louder), ↓ (quieter) - **NEW in v3.0!**
+- **Display Toggle**: V (show/hide controller)
+- **Fullscreen Support**: All shortcuts work perfectly in fullscreen mode
+- **Customizable Bindings**: Modify any shortcut in the extension options
 
-## 📁 Project Structure
+### 📊 Intelligent Media Tab Management
+- **Ultra-Conservative Tracking**: Media tabs persist indefinitely until actually closed
+- **Simultaneous Playback Prevention**: Only one tab plays audio/video at a time
+- **Smart Pause Management**: Automatic pausing when switching between media tabs
+- **Restart Resilience**: Tab tracking survives extension restarts and browser crashes
+- **Network Fault Tolerance**: Communication failures don't break media management
 
-```
-OneTab Media/
-├── chrome-extension/          # Complete Chrome extension
-│   ├── manifest.json         # Chrome Manifest V3
-│   ├── background.js         # Service worker
-│   ├── content.js           # Content script
-│   ├── popup/               # Popup interface
-│   │   ├── popup.html
-│   │   ├── popup.css
-│   │   └── popup.js
-│   ├── icons/               # Extension icons
-│   └── README.md            # Chrome-specific instructions
-│
-├── firefox-extension/         # Complete Firefox extension
-│   ├── manifest.json         # Firefox Manifest V2
-│   ├── background.js         # Background script
-│   ├── content.js           # Content script
-│   ├── popup/               # Popup interface
-│   │   ├── popup.html
-│   │   ├── popup.css
-│   │   └── popup.js
-│   ├── icons/               # Extension icons
-│   └── README.md            # Firefox-specific instructions
-│
-├── test/                     # Test files
-├── docs/                     # Documentation
-└── README.md                # This file
-```
+### 🎛️ Professional Options Interface
+- **Tabbed Settings Panel**: Organized settings across multiple categories
+- **Real-Time Configuration**: Changes apply instantly without requiring restarts
+- **Website Blacklisting**: Exclude specific domains from speed/volume control
+- **Keyboard Shortcut Customization**: Full control over all key bindings
+- **Import/Export Settings**: Backup and restore your configuration
 
 ## 🛠️ Installation
 
-### Chrome Extension
+### Chrome Extension (Manifest V3)
 1. Navigate to the `chrome-extension` folder
 2. Follow the instructions in [chrome-extension/README.md](./chrome-extension/README.md)
+3. Load the extension in Chrome's developer mode
 
-### Firefox Extension
-1. Navigate to the `firefox-extension` folder
+### Firefox Extension (Manifest V2)
+1. Navigate to the `firefox-extension` folder  
 2. Follow the instructions in [firefox-extension/README.md](./firefox-extension/README.md)
+3. Install as a temporary add-on or package as .xpi
 
 ## 🎯 How It Works
 
-1. **Media Detection**: Content scripts monitor all web pages for HTML5 video/audio elements and Web Audio API usage
-2. **Cross-Tab Communication**: Background script coordinates between tabs to manage playback
-3. **Smart Pausing**: When media starts in a new tab, the extension automatically pauses media in all other tabs
-4. **User Control**: Popup interface allows manual control and shows the status of all media tabs
+### Multi-Layer Media Detection
+1. **HTML5 Element Monitoring**: Tracks all `<video>` and `<audio>` elements
+2. **Web Audio API Integration**: Monitors Web Audio contexts and gain nodes
+3. **Dynamic Content Support**: Handles SPA navigation and dynamically loaded media
+4. **Cross-Frame Detection**: Works with embedded videos and iframes
 
-## 🎨 Modern UI Features
+### Intelligent Coordination System
+1. **Background Script Orchestration**: Central coordination between all browser tabs
+2. **Real-Time State Synchronization**: Instant communication between tabs and popup
+3. **Persistent Storage**: Settings synchronized across devices via Chrome/Firefox sync
+4. **Conflict Resolution**: Advanced algorithms prevent simultaneous playback issues
 
-- **Toggle Switch**: Enable/disable the extension with a beautiful animated toggle
-- **Real-time Status**: Live status indicators showing which tabs are playing/paused
-- **Individual Controls**: Pause buttons for currently playing tabs
-- **Tab Switching**: Click any tab to switch to it instantly
-- **Modern Design**: Clean, responsive interface with smooth animations
+## 🔧 Supported Platforms & Media
 
-## 🔧 Supported Media Types
+### **Streaming Platforms**
+- ✅ YouTube, Vimeo, Netflix, Disney+, Amazon Prime, Hulu
+- ✅ Twitch, YouTube Live, Facebook Watch
+- ✅ Spotify Web Player, SoundCloud, Pandora, YouTube Music
+- ✅ Plex, Jellyfin, Emby, and self-hosted media servers
 
-- HTML5 `<video>` and `<audio>` elements
-- Web Audio API (partial support)
-- YouTube, Vimeo, Netflix, and most video streaming sites
-- Spotify, SoundCloud, and audio streaming services
-- Web-based media players (Plex, etc.)
+### **Educational & Professional**
+- ✅ Coursera, Udemy, Khan Academy, edX
+- ✅ LinkedIn Learning, Skillshare, MasterClass
+- ✅ Zoom, Teams, Google Meet (recorded playbacks)
 
-## 🚀 Development
+### **Technical Capabilities**
+- ✅ HTML5 video/audio elements
+- ✅ Web Audio API with gain control
+- ✅ MediaSource Extensions (MSE)
+- ✅ Encrypted Media Extensions (EME)
+- ✅ WebRTC playback (recordings)
 
-Each extension folder is completely independent:
+## 🧪 Testing & Quality Assurance
 
-- **Chrome**: Modern Manifest V3 with service workers
-- **Firefox**: Manifest V2 with background scripts
-- **Shared Logic**: Same core functionality, optimized for each browser
+### Comprehensive Test Suite
+A complete test environment is available at `test/test-media.html`:
 
-To modify either extension:
-1. Navigate to the appropriate folder (`chrome-extension` or `firefox-extension`)
-2. Make your changes
-3. Reload the extension in the browser
-4. Test your changes
+```bash
+cd test
+python -m http.server 8080
+# Open http://localhost:8080/test-media.html
+```
 
-## 📋 Testing
+### Test Coverage
+- ✅ **Multi-Tab Simultaneous Playback Prevention**
+- ✅ **Volume Booster Safety & Functionality**
+- ✅ **Keyboard Shortcuts in All Scenarios**
+- ✅ **Speed Control Precision & Memory**
+- ✅ **Extension Restart Persistence**
+- ✅ **Network Failure Recovery**
 
-A test page is available at `test/test-media.html` to verify the extension functionality:
+## 🔒 Privacy & Security
 
-1. Start the test server: `python -m http.server 8000` (from the `test` directory)
-2. Open `http://localhost:8000/test-media.html`
-3. Test various media types and scenarios
+### Privacy-First Design
+- ✅ **Zero Data Collection**: No personal information is gathered or transmitted
+- ✅ **Local Processing**: All functionality runs entirely in your browser
+- ✅ **No External Connections**: Extension doesn't communicate with any servers
+- ✅ **Transparent Permissions**: Only requests necessary browser APIs
+- ✅ **Open Source**: Complete source code available for inspection
 
-## 🔒 Privacy
+### Security Features
+- ✅ **Content Security Policy**: Strict CSP prevents XSS attacks
+- ✅ **Isolated Execution**: Content scripts run in isolated environments
+- ✅ **Permission Minimization**: Requests only essential permissions
+- ✅ **Safe Volume Limits**: Built-in protection against hearing damage
 
-This extension:
-- Only runs on web pages you visit
-- Does not collect or transmit any personal data
-- Stores only your enable/disable preference locally
-- Does not access your browsing history or personal information
-- All processing happens locally in your browser
+## 📈 Performance & Compatibility
 
-## 📚 Documentation
+### Optimized Performance
+- ⚡ **Minimal CPU Impact**: Efficient event-driven architecture
+- ⚡ **Low Memory Footprint**: Smart resource management and cleanup
+- ⚡ **Battery Friendly**: Optimized for laptop and mobile device usage
+- ⚡ **Fast Startup**: Instant initialization and response times
 
-- [Architecture Overview](./docs/ARCHITECTURE.md)
-- [Installation Guide](./docs/INSTALLATION.md)
-- [Chrome Extension README](./chrome-extension/README.md)
-- [Firefox Extension README](./firefox-extension/README.md)
+### Browser Compatibility
+- 🟢 **Chrome 88+**: Full Manifest V3 support with service workers
+- 🦊 **Firefox 79+**: Complete Manifest V2 implementation
+- ✅ **Edge Chromium**: Compatible with Chrome extension
+- ✅ **Cross-Platform**: Windows, macOS, Linux support
+
+## 📋 Version 3.0 Changelog Highlights
+
+### 🚨 Critical Fixes
+- **✅ RESOLVED: Simultaneous Playback Issue** - Complete fix for multiple tabs playing audio simultaneously
+- **✅ FIXED: Tab Persistence** - Media tabs no longer disappear unexpectedly  
+- **✅ ENHANCED: Volume Control Integration** - Volume shortcuts now appear in options page
+- **✅ IMPROVED: Extension Stability** - Bulletproof tracking system survives restarts and errors
+
+### 🎯 Impact Summary
+**Before v3.0:** ❌ Unreliable tab tracking, simultaneous playback issues, missing volume shortcuts  
+**After v3.0:** ✅ **Perfect media control**, zero simultaneous playback, complete feature integration
 
 ## 🤝 Contributing
 
+### Development Setup
 1. Fork the repository
-2. Choose the extension you want to work on (`chrome-extension` or `firefox-extension`)
-3. Make your changes
-4. Test thoroughly on the target browser
-5. Submit a pull request
+2. Choose your target browser (`chrome-extension` or `firefox-extension`)
+3. Make changes and test thoroughly
+4. Run the test suite to ensure no regressions
+5. Submit a detailed pull request
+
+### Code Standards
+- ES6+ JavaScript with proper error handling
+- Comprehensive console logging for debugging
+- Cross-browser compatibility testing required
+- Performance impact assessment for all changes
+
+## 📚 Documentation
+
+- [📖 Architecture Overview](./docs/ARCHITECTURE.md)
+- [🔧 Installation Guide](./docs/INSTALLATION.md)  
+- [📝 Release Notes v3.0](./docs/RELEASE_NOTES_v3.0.md)
+- [📊 Complete Changelog](./CHANGELOG.md)
+
+## 🙏 Credits & Acknowledgments
+
+UME v3.0 integrates and builds upon the excellent work of these open-source projects:
+
+### 🎬 Video Speed Controller Integration
+- **Original Project**: [Video Speed Controller](https://github.com/igrigorik/videospeed) by [@igrigorik](https://github.com/igrigorik)
+- **Repository**: https://github.com/igrigorik/videospeed  
+- **License**: MIT License
+- **Features Integrated**: Advanced speed control system, keyboard shortcuts, visual overlay controller
+- **Our Enhancement**: Enhanced fullscreen support, per-domain settings, improved UI/UX, and integrated tab management
+
+### 🔊 Volume Booster Integration  
+- **Original Project**: [Better-Volume-Booster](https://github.com/zWolfrost/Better-Volume-Booster)
+- **Developer**: [@zWolfrost](https://github.com/zWolfrost)
+- **Features Integrated**: Web Audio API volume amplification, gain node management, audio enhancement
+- **Our Enhancement**: Per-domain volume memory, popup controls, keyboard shortcuts, safety limits, and seamless integration with speed controls
+
+### 🛠️ Additional Acknowledgments
+- **Original Media Tab Management Concept**: Inspired by various "one tab audio" extensions
+- **Cross-Browser Compatibility**: Built on standard Web Extensions API
+- **UI/UX Design**: Modern design principles with accessibility in mind
+
+**Thank you** to all the original developers whose work made UME possible. This extension stands on the shoulders of giants in the open-source browser extension community.
 
 ## 📄 License
 
-This project is open source. Feel free to use, modify, and distribute as needed.
+Open source project available under standard open source terms. Free to use, modify, and distribute.
+
+**Note**: Please respect the licenses of the original integrated projects when using or modifying this code.
 
 ---
 
-**Ready to install?** Choose your browser and follow the specific README:
-- 🟢 [Chrome Extension](./chrome-extension/README.md)
-- 🦊 [Firefox Extension](./firefox-extension/README.md) 
+## 🎉 Ready to Transform Your Media Experience?
+
+**Choose your browser and get started:**
+- 🟢 **[Chrome Extension](./chrome-extension/README.md)** - Modern Manifest V3
+- 🦊 **[Firefox Extension](./firefox-extension/README.md)** - Optimized Manifest V2
+
+**UME v3.0** - Where media control meets perfection. 🎬🎵

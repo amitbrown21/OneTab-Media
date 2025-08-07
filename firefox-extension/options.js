@@ -13,31 +13,43 @@ const browserAPI = (function() {
   return null;
 })();
 
-// Default settings - Enhanced to match original videospeed extension
+// Default settings - Enhanced to match original videospeed extension exactly  
 const defaultSettings = {
   extensionEnabled: true,
   enabled: true, // Legacy compatibility
   showController: true,
   startHidden: false,
-  rememberSpeed: false,
-  forceLastSavedSpeed: false, // Always apply last saved speed to new videos
-  audioBoolean: false,
-  controllerOpacity: 0.3,
+  rememberSpeed: true, // Enable by default like original
+  forceLastSavedSpeed: false, // Always apply last saved speed to new videos  
+  audioBoolean: true, // Enable on audio by default
+  controllerOpacity: 0.8, // More visible like original
   speed: 1.0, // Default speed for videos
   displayKeyCode: 86, // V key for display toggle
   keyBindings: [
     { action: 'display', key: 86, value: 0, force: false, predefined: true }, // V
-    { action: 'slower', key: 83, value: 0.1, force: false, predefined: true }, // S
-    { action: 'faster', key: 68, value: 0.1, force: false, predefined: true }, // D
+    { action: 'slower', key: 83, value: 0.25, force: false, predefined: true }, // S  
+    { action: 'faster', key: 68, value: 0.25, force: false, predefined: true }, // D
     { action: 'rewind', key: 90, value: 10, force: false, predefined: true }, // Z
     { action: 'advance', key: 88, value: 10, force: false, predefined: true }, // X
     { action: 'reset', key: 82, value: 1.0, force: false, predefined: true }, // R
-    { action: 'fast', key: 71, value: 1.8, force: false, predefined: true } // G
+    { action: 'fast', key: 71, value: 1.8, force: false, predefined: true }, // G
+    { action: 'mark', key: 77, value: 0, force: false, predefined: true }, // M - set marker
+    { action: 'jump', key: 74, value: 0, force: false, predefined: true }, // J - jump to marker
+    { action: 'volumeUp', key: 38, value: 0.1, force: false, predefined: true }, // Up Arrow - increase volume
+    { action: 'volumeDown', key: 40, value: 0.1, force: false, predefined: true } // Down Arrow - decrease volume
   ],
   blacklist: `www.instagram.com
 twitter.com
 imgur.com
-teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, '')
+teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, ''),
+  // Volume booster settings
+  volumeBoosterEnabled: true,
+  globalVolume: 1.0, // Global volume multiplier
+  perDomainVolume: {}, // Store per-domain volume settings
+  volumeBoostLimit: 5.0, // Maximum volume boost (500%)
+  volumeStep: 0.1, // Volume adjustment increment
+  // Marker functionality
+  markers: {} // Store video markers per URL
 };
 
 // Actions that don't need custom values
@@ -51,7 +63,11 @@ const actionDescriptions = {
   rewind: 'Rewind',
   advance: 'Advance',
   reset: 'Reset Speed',
-  fast: 'Preferred Speed'
+  fast: 'Preferred Speed',
+  mark: 'Set Marker',
+  jump: 'Jump to Marker',
+  volumeUp: 'Volume Up',
+  volumeDown: 'Volume Down'
 };
 
 // Key code to name mapping
@@ -254,6 +270,22 @@ async function loadSettings() {
       blacklistEl.value = currentSettings.blacklist || '';
     }
     
+    // Load volume booster settings
+    const volumeBoosterEnabledEl = document.getElementById('volumeBoosterEnabled');
+    if (volumeBoosterEnabledEl) {
+      volumeBoosterEnabledEl.checked = currentSettings.volumeBoosterEnabled !== false;
+    }
+    
+    const volumeBoostLimitEl = document.getElementById('volumeBoostLimit');
+    if (volumeBoostLimitEl) {
+      volumeBoostLimitEl.value = currentSettings.volumeBoostLimit || 5.0;
+    }
+    
+    const globalVolumeEl = document.getElementById('globalVolume');  
+    if (globalVolumeEl) {
+      globalVolumeEl.value = currentSettings.globalVolume || 1.0;
+    }
+    
     // Load opacity setting
     const opacitySlider = document.getElementById('controllerOpacity');
     const opacityValue = document.getElementById('opacityValue');
@@ -391,6 +423,27 @@ async function saveSettings() {
     if (blacklistEl) {
       settings.blacklist = blacklistEl.value.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, '');
     }
+    
+    // Add volume booster settings if elements exist
+    const volumeBoosterEnabledEl = document.getElementById('volumeBoosterEnabled');
+    if (volumeBoosterEnabledEl) {
+      settings.volumeBoosterEnabled = volumeBoosterEnabledEl.checked;
+    }
+    
+    const volumeBoostLimitEl = document.getElementById('volumeBoostLimit');
+    if (volumeBoostLimitEl) {
+      settings.volumeBoostLimit = parseFloat(volumeBoostLimitEl.value) || 5.0;
+    }
+    
+    const globalVolumeEl = document.getElementById('globalVolume');
+    if (globalVolumeEl) {
+      settings.globalVolume = parseFloat(globalVolumeEl.value) || 1.0;
+    }
+    
+    // Include additional settings
+    settings.perDomainVolume = currentSettings.perDomainVolume || {};
+    settings.volumeStep = currentSettings.volumeStep || 0.1;
+    settings.markers = currentSettings.markers || {};
     
     // Save to storage
     await browserAPI.storage.sync.set(settings);

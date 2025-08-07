@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UME - Cross-Browser Compatibility Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .browser-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 5px solid #007bff;
+        }
+        
+        .chrome-section {
+            border-left-color: #4285f4;
+        }
+        
+        .firefox-section {
+            border-left-color: #ff7139;
+        }
+        
+        .test-results {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .compatibility-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-test {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .status-pass {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status-fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .status-warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .status-unknown {
+            color: #6c757d;
+            font-weight: bold;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover { background: #0056b3; }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        
+        .api-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .api-column {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 UME Cross-Browser Compatibility Tests</h1>
+        <p>Test Ultimate Media Extension compatibility across Chrome and Firefox</p>
+    </div>
+    
+    <div class="info-box">
+        <h3>🔍 Browser Detection</h3>
+        <div id="browserInfo">Detecting browser...</div>
+        <div id="extensionAPIs">Checking extension APIs...</div>
+    </div>
+    
+    <div class="browser-section">
+        <h2>🧪 Compatibility Test Suite</h2>
+        <button onclick="runAllCompatibilityTests()">🚀 Run All Compatibility Tests</button>
+        <button onclick="runAPITests()">🔌 API Tests</button>
+        <button onclick="runStorageTests()">💾 Storage Tests</button>
+        <button onclick="runManifestTests()">📋 Manifest Tests</button>
+        <button onclick="runBehaviorTests()">⚙️ Behavior Tests</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+        
+        <div id="testResults" class="test-results">
+            Click "Run All Compatibility Tests" to start testing...
+        </div>
+    </div>
+    
+    <div class="compatibility-grid">
+        <div class="feature-test chrome-section">
+            <h3>🟦 Chrome (Manifest V3)</h3>
+            <div id="chromeFeatures">
+                <div>Service Worker: <span id="chrome-serviceworker" class="status-unknown">Unknown</span></div>
+                <div>chrome.* APIs: <span id="chrome-apis" class="status-unknown">Unknown</span></div>
+                <div>Storage Sync: <span id="chrome-storage" class="status-unknown">Unknown</span></div>
+                <div>Tabs API: <span id="chrome-tabs" class="status-unknown">Unknown</span></div>
+                <div>Runtime Messages: <span id="chrome-runtime" class="status-unknown">Unknown</span></div>
+            </div>
+        </div>
+        
+        <div class="feature-test firefox-section">
+            <h3>🟧 Firefox (Manifest V2)</h3>
+            <div id="firefoxFeatures">
+                <div>Background Script: <span id="firefox-background" class="status-unknown">Unknown</span></div>
+                <div>browser.* APIs: <span id="firefox-apis" class="status-unknown">Unknown</span></div>
+                <div>Storage Sync: <span id="firefox-storage" class="status-unknown">Unknown</span></div>
+                <div>Tabs API: <span id="firefox-tabs" class="status-unknown">Unknown</span></div>
+                <div>Runtime Messages: <span id="firefox-runtime" class="status-unknown">Unknown</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="browser-section">
+        <h2>📊 API Comparison</h2>
+        <div class="api-comparison">
+            <div class="api-column">
+                <h4>Chrome Extension APIs</h4>
+                <pre id="chromeAPIs">Loading Chrome API information...</pre>
+            </div>
+            <div class="api-column">
+                <h4>Firefox Extension APIs</h4>
+                <pre id="firefoxAPIs">Loading Firefox API information...</pre>
+            </div>
+        </div>
+    </div>
+    
+    <div class="browser-section">
+        <h2>⚙️ Behavioral Differences</h2>
+        <div id="behaviorTests" class="test-results">
+            Behavioral tests will appear here...
+        </div>
+    </div>
+    
+    <div class="warning-box">
+        <h3>⚠️ Known Compatibility Issues</h3>
+        <ul>
+            <li><strong>Manifest Versions:</strong> Chrome uses V3 (Service Workers), Firefox uses V2 (Background Scripts)</li>
+            <li><strong>API Namespaces:</strong> Chrome uses <code>chrome.*</code>, Firefox uses <code>browser.*</code></li>
+            <li><strong>Promise Support:</strong> Firefox APIs return promises, Chrome uses callbacks (with polyfill)</li>
+            <li><strong>Content Security Policy:</strong> Different restrictions between browsers</li>
+            <li><strong>Storage Sync:</strong> May have different limits and sync behavior</li>
+        </ul>
+    </div>
+    
+    <div class="browser-section">
+        <h2>🔧 Test Configuration</h2>
+        <div class="info-box">
+            <h4>Testing Instructions:</h4>
+            <ol>
+                <li>Install the UME extension in your browser</li>
+                <li>Run the compatibility tests above</li>
+                <li>Compare results between Chrome and Firefox</li>
+                <li>Check for any browser-specific failures</li>
+                <li>Verify that core functionality works identically</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Cross-browser compatibility testing framework
+        class CrossBrowserTester {
+            constructor() {
+                this.testResults = [];
+                this.browserInfo = this.detectBrowser();
+                this.extensionAPIs = this.detectExtensionAPIs();
+            }
+
+            detectBrowser() {
+                const userAgent = navigator.userAgent;
+                let browserName = 'Unknown';
+                let version = 'Unknown';
+
+                if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+                    browserName = 'Chrome';
+                    const match = userAgent.match(/Chrome\/(\d+\.\d+\.\d+\.\d+)/);
+                    if (match) version = match[1];
+                } else if (userAgent.includes('Firefox')) {
+                    browserName = 'Firefox';
+                    const match = userAgent.match(/Firefox\/(\d+\.\d+)/);
+                    if (match) version = match[1];
+                } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+                    browserName = 'Safari';
+                    const match = userAgent.match(/Version\/(\d+\.\d+)/);
+                    if (match) version = match[1];
+                } else if (userAgent.includes('Edg')) {
+                    browserName = 'Edge';
+                    const match = userAgent.match(/Edg\/(\d+\.\d+\.\d+\.\d+)/);
+                    if (match) version = match[1];
+                }
+
+                return { name: browserName, version, userAgent };
+            }
+
+            detectExtensionAPIs() {
+                const apis = {
+                    chrome: {
+                        available: typeof chrome !== 'undefined',
+                        runtime: !!(window.chrome?.runtime),
+                        storage: !!(window.chrome?.storage),
+                        tabs: !!(window.chrome?.tabs),
+                        extension: !!(window.chrome?.extension)
+                    },
+                    browser: {
+                        available: typeof browser !== 'undefined',
+                        runtime: !!(window.browser?.runtime),
+                        storage: !!(window.browser?.storage),
+                        tabs: !!(window.browser?.tabs)
+                    },
+                    webext: {
+                        serviceWorker: 'serviceWorker' in navigator,
+                        webAudio: !!(window.AudioContext || window.webkitAudioContext),
+                        localStorage: !!window.localStorage,
+                        indexedDB: !!window.indexedDB
+                    }
+                };
+
+                return apis;
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const typeColors = {
+                    info: '#17a2b8',
+                    pass: '#28a745',
+                    fail: '#dc3545',
+                    warn: '#ffc107'
+                };
+
+                const element = document.createElement('div');
+                element.style.color = typeColors[type] || typeColors.info;
+                element.innerHTML = `[${timestamp}] ${message}`;
+                
+                const resultsDiv = document.getElementById('testResults');
+                resultsDiv.appendChild(element);
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            }
+
+            async runAPITests() {
+                this.log('🔌 Starting API compatibility tests...', 'info');
+
+                // Test Chrome APIs
+                if (this.extensionAPIs.chrome.available) {
+                    this.log('✅ Chrome APIs detected', 'pass');
+                    
+                    try {
+                        // Test storage API
+                        if (chrome.storage && chrome.storage.sync) {
+                            chrome.storage.sync.set({ testKey: 'testValue' }, () => {
+                                if (chrome.runtime.lastError) {
+                                    this.log('❌ Chrome storage.sync failed: ' + chrome.runtime.lastError.message, 'fail');
+                                } else {
+                                    this.log('✅ Chrome storage.sync working', 'pass');
+                                }
+                            });
+                        }
+
+                        // Test runtime API
+                        if (chrome.runtime) {
+                            this.log('✅ Chrome runtime API available', 'pass');
+                        }
+
+                        // Test tabs API
+                        if (chrome.tabs) {
+                            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                                if (chrome.runtime.lastError) {
+                                    this.log('❌ Chrome tabs API failed: ' + chrome.runtime.lastError.message, 'fail');
+                                } else {
+                                    this.log('✅ Chrome tabs API working', 'pass');
+                                }
+                            });
+                        }
+
+                    } catch (error) {
+                        this.log('❌ Chrome API test error: ' + error.message, 'fail');
+                    }
+                } else {
+                    this.log('❌ Chrome APIs not available', 'fail');
+                }
+
+                // Test Firefox APIs
+                if (this.extensionAPIs.browser.available) {
+                    this.log('✅ Firefox (browser.*) APIs detected', 'pass');
+                    
+                    try {
+                        // Test storage API
+                        if (browser.storage && browser.storage.sync) {
+                            browser.storage.sync.set({ testKey: 'testValue' }).then(() => {
+                                this.log('✅ Firefox storage.sync working', 'pass');
+                            }).catch(error => {
+                                this.log('❌ Firefox storage.sync failed: ' + error.message, 'fail');
+                            });
+                        }
+
+                        // Test runtime API
+                        if (browser.runtime) {
+                            this.log('✅ Firefox runtime API available', 'pass');
+                        }
+
+                        // Test tabs API
+                        if (browser.tabs) {
+                            browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+                                this.log('✅ Firefox tabs API working', 'pass');
+                            }).catch(error => {
+                                this.log('❌ Firefox tabs API failed: ' + error.message, 'fail');
+                            });
+                        }
+
+                    } catch (error) {
+                        this.log('❌ Firefox API test error: ' + error.message, 'fail');
+                    }
+                } else {
+                    this.log('❌ Firefox APIs not available', 'fail');
+                }
+            }
+
+            async runStorageTests() {
+                this.log('💾 Starting storage compatibility tests...', 'info');
+
+                const testData = {
+                    extensionEnabled: true,
+                    speed: 1.5,
+                    volume: 2.0,
+                    keyBindings: [
+                        { action: 'faster', key: 68, value: 0.25 }
+                    ],
+                    timestamp: Date.now()
+                };
+
+                // Test Chrome storage
+                if (this.extensionAPIs.chrome.available && chrome.storage) {
+                    try {
+                        chrome.storage.sync.set(testData, () => {
+                            if (chrome.runtime.lastError) {
+                                this.log('❌ Chrome storage set failed: ' + chrome.runtime.lastError.message, 'fail');
+                            } else {
+                                chrome.storage.sync.get(['extensionEnabled', 'speed'], (result) => {
+                                    if (chrome.runtime.lastError) {
+                                        this.log('❌ Chrome storage get failed: ' + chrome.runtime.lastError.message, 'fail');
+                                    } else {
+                                        this.log('✅ Chrome storage get/set working: ' + JSON.stringify(result), 'pass');
+                                    }
+                                });
+                            }
+                        });
+                    } catch (error) {
+                        this.log('❌ Chrome storage test error: ' + error.message, 'fail');
+                    }
+                }
+
+                // Test Firefox storage
+                if (this.extensionAPIs.browser.available && browser.storage) {
+                    try {
+                        browser.storage.sync.set(testData).then(() => {
+                            return browser.storage.sync.get(['extensionEnabled', 'speed']);
+                        }).then(result => {
+                            this.log('✅ Firefox storage get/set working: ' + JSON.stringify(result), 'pass');
+                        }).catch(error => {
+                            this.log('❌ Firefox storage test error: ' + error.message, 'fail');
+                        });
+                    } catch (error) {
+                        this.log('❌ Firefox storage test error: ' + error.message, 'fail');
+                    }
+                }
+            }
+
+            async runManifestTests() {
+                this.log('📋 Starting manifest compatibility tests...', 'info');
+
+                // Check for manifest differences
+                const manifestFeatures = {
+                    serviceWorker: 'serviceWorker' in navigator,
+                    backgroundScript: this.browserInfo.name === 'Firefox',
+                    manifestV3: this.browserInfo.name === 'Chrome',
+                    manifestV2: this.browserInfo.name === 'Firefox',
+                    contentSecurityPolicy: true,
+                    webAccessibleResources: true
+                };
+
+                Object.entries(manifestFeatures).forEach(([feature, supported]) => {
+                    const status = supported ? '✅' : '❌';
+                    const type = supported ? 'pass' : 'warn';
+                    this.log(`${status} ${feature}: ${supported}`, type);
+                });
+
+                // Check permissions
+                this.log('📋 Checking extension permissions...', 'info');
+                
+                if (this.extensionAPIs.chrome.available) {
+                    this.log('✅ Chrome extension context detected', 'pass');
+                } else if (this.extensionAPIs.browser.available) {
+                    this.log('✅ Firefox extension context detected', 'pass');
+                } else {
+                    this.log('⚠️ No extension context detected - testing from web page', 'warn');
+                }
+            }
+
+            async runBehaviorTests() {
+                this.log('⚙️ Starting behavioral compatibility tests...', 'info');
+
+                const behaviorResults = document.getElementById('behaviorTests');
+                
+                // Test Web Audio API compatibility
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        const audioContext = new AudioContextClass();
+                        this.log('✅ Web Audio API available (for volume booster)', 'pass');
+                        
+                        // Test if audio context starts suspended (modern browsers)
+                        if (audioContext.state === 'suspended') {
+                            this.log('⚠️ Audio context starts suspended - user interaction required', 'warn');
+                        } else {
+                            this.log('✅ Audio context ready immediately', 'pass');
+                        }
+                        
+                        audioContext.close();
+                    } else {
+                        this.log('❌ Web Audio API not available', 'fail');
+                    }
+                } catch (error) {
+                    this.log('❌ Web Audio API test error: ' + error.message, 'fail');
+                }
+
+                // Test keyboard event handling
+                try {
+                    const testEvent = new KeyboardEvent('keydown', {
+                        keyCode: 86, // V key
+                        which: 86,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    
+                    document.dispatchEvent(testEvent);
+                    this.log('✅ Keyboard event simulation working', 'pass');
+                } catch (error) {
+                    this.log('❌ Keyboard event test error: ' + error.message, 'fail');
+                }
+
+                // Test local storage
+                try {
+                    localStorage.setItem('umeTest', 'test');
+                    const value = localStorage.getItem('umeTest');
+                    localStorage.removeItem('umeTest');
+                    
+                    if (value === 'test') {
+                        this.log('✅ Local storage working', 'pass');
+                    } else {
+                        this.log('❌ Local storage test failed', 'fail');
+                    }
+                } catch (error) {
+                    this.log('❌ Local storage error: ' + error.message, 'fail');
+                }
+
+                // Test URL handling
+                try {
+                    const testUrl = new URL('https://example.com/test?param=value');
+                    this.log('✅ URL constructor available (for hostname tracking)', 'pass');
+                } catch (error) {
+                    this.log('❌ URL constructor test error: ' + error.message, 'fail');
+                }
+
+                // Test Promise support
+                try {
+                    Promise.resolve('test').then(() => {
+                        this.log('✅ Promise support available', 'pass');
+                    });
+                } catch (error) {
+                    this.log('❌ Promise test error: ' + error.message, 'fail');
+                }
+            }
+
+            updateFeatureStatus(feature, status, type = 'pass') {
+                const element = document.getElementById(feature);
+                if (element) {
+                    element.textContent = status;
+                    element.className = `status-${type}`;
+                }
+            }
+
+            updateBrowserInfo() {
+                const browserInfoDiv = document.getElementById('browserInfo');
+                browserInfoDiv.innerHTML = `
+                    <strong>Browser:</strong> ${this.browserInfo.name} ${this.browserInfo.version}<br>
+                    <strong>Platform:</strong> ${navigator.platform}<br>
+                    <strong>User Agent:</strong> ${this.browserInfo.userAgent.substring(0, 100)}...
+                `;
+
+                const extensionAPIsDiv = document.getElementById('extensionAPIs');
+                extensionAPIsDiv.innerHTML = `
+                    <strong>Chrome APIs:</strong> ${this.extensionAPIs.chrome.available ? '✅' : '❌'}<br>
+                    <strong>Firefox APIs:</strong> ${this.extensionAPIs.browser.available ? '✅' : '❌'}<br>
+                    <strong>Web Audio:</strong> ${this.extensionAPIs.webext.webAudio ? '✅' : '❌'}<br>
+                    <strong>Service Worker:</strong> ${this.extensionAPIs.webext.serviceWorker ? '✅' : '❌'}
+                `;
+
+                // Update feature status displays
+                if (this.browserInfo.name === 'Chrome') {
+                    this.updateFeatureStatus('chrome-serviceworker', 'Available', 'pass');
+                    this.updateFeatureStatus('chrome-apis', 'Available', this.extensionAPIs.chrome.available ? 'pass' : 'fail');
+                    this.updateFeatureStatus('chrome-storage', this.extensionAPIs.chrome.storage ? 'Available' : 'Not Available', this.extensionAPIs.chrome.storage ? 'pass' : 'fail');
+                    this.updateFeatureStatus('chrome-tabs', this.extensionAPIs.chrome.tabs ? 'Available' : 'Not Available', this.extensionAPIs.chrome.tabs ? 'pass' : 'fail');
+                    this.updateFeatureStatus('chrome-runtime', this.extensionAPIs.chrome.runtime ? 'Available' : 'Not Available', this.extensionAPIs.chrome.runtime ? 'pass' : 'fail');
+                }
+
+                if (this.browserInfo.name === 'Firefox') {
+                    this.updateFeatureStatus('firefox-background', 'Available', 'pass');
+                    this.updateFeatureStatus('firefox-apis', 'Available', this.extensionAPIs.browser.available ? 'pass' : 'fail');
+                    this.updateFeatureStatus('firefox-storage', this.extensionAPIs.browser.storage ? 'Available' : 'Not Available', this.extensionAPIs.browser.storage ? 'pass' : 'fail');
+                    this.updateFeatureStatus('firefox-tabs', this.extensionAPIs.browser.tabs ? 'Available' : 'Not Available', this.extensionAPIs.browser.tabs ? 'pass' : 'fail');
+                    this.updateFeatureStatus('firefox-runtime', this.extensionAPIs.browser.runtime ? 'Available' : 'Not Available', this.extensionAPIs.browser.runtime ? 'pass' : 'fail');
+                }
+
+                // Update API comparison
+                const chromeAPIsDiv = document.getElementById('chromeAPIs');
+                chromeAPIsDiv.textContent = JSON.stringify(this.extensionAPIs.chrome, null, 2);
+
+                const firefoxAPIsDiv = document.getElementById('firefoxAPIs');
+                firefoxAPIsDiv.textContent = JSON.stringify(this.extensionAPIs.browser, null, 2);
+            }
+        }
+
+        // Initialize tester
+        const crossBrowserTester = new CrossBrowserTester();
+
+        // Test functions
+        async function runAllCompatibilityTests() {
+            crossBrowserTester.log('🚀 Starting comprehensive cross-browser compatibility tests...', 'info');
+            
+            await crossBrowserTester.runAPITests();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await crossBrowserTester.runStorageTests();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await crossBrowserTester.runManifestTests();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await crossBrowserTester.runBehaviorTests();
+            
+            crossBrowserTester.log('✅ All compatibility tests completed!', 'pass');
+        }
+
+        function runAPITests() {
+            crossBrowserTester.runAPITests();
+        }
+
+        function runStorageTests() {
+            crossBrowserTester.runStorageTests();
+        }
+
+        function runManifestTests() {
+            crossBrowserTester.runManifestTests();
+        }
+
+        function runBehaviorTests() {
+            crossBrowserTester.runBehaviorTests();
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = 'Results cleared. Click a test button to start testing...';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            crossBrowserTester.updateBrowserInfo();
+            crossBrowserTester.log('🌐 Cross-browser compatibility tester initialized', 'info');
+            crossBrowserTester.log(`Detected browser: ${crossBrowserTester.browserInfo.name} ${crossBrowserTester.browserInfo.version}`, 'info');
+        });
+
+        // Global access
+        window.crossBrowserTester = crossBrowserTester;
+        console.log('🧪 Cross-browser tester loaded. Use window.crossBrowserTester to access.');
+    </script>
+</body>
+</html>

@@ -27,7 +27,7 @@
   const trackedElements = new WeakMap();
   const activeMediaElements = new Set();
   
-  // Speed control settings
+  // Enhanced settings to match original videospeed extension
   let speedSettings = {
     lastSpeed: 1.0,
     enabled: true,
@@ -35,18 +35,36 @@
     // Visual controller settings
     showController: true,
     startHidden: false,
-    controllerOpacity: 0.3,
+    controllerOpacity: 0.8, // More visible like original
     displayKeyCode: 86, // V key
+    rememberSpeed: true,
+    forceLastSavedSpeed: false,
+    audioBoolean: true,
     keyBindings: [
       { action: 'display', key: 86, value: 0, force: false }, // V
-      { action: 'slower', key: 83, value: 0.1, force: false }, // S
-      { action: 'faster', key: 68, value: 0.1, force: false }, // D
+      { action: 'slower', key: 83, value: 0.25, force: false }, // S
+      { action: 'faster', key: 68, value: 0.25, force: false }, // D
       { action: 'rewind', key: 90, value: 10, force: false }, // Z
       { action: 'advance', key: 88, value: 10, force: false }, // X
       { action: 'reset', key: 82, value: 1.0, force: false }, // R
-      { action: 'fast', key: 71, value: 1.8, force: false } // G
-    ]
+      { action: 'fast', key: 71, value: 1.8, force: false }, // G
+      { action: 'mark', key: 77, value: 0, force: false }, // M - set marker
+      { action: 'jump', key: 74, value: 0, force: false }, // J - jump to marker
+      { action: 'volumeUp', key: 38, value: 0.1, force: false }, // Up Arrow - increase volume
+      { action: 'volumeDown', key: 40, value: 0.1, force: false } // Down Arrow - decrease volume
+    ],
+    // Volume booster settings
+    volumeBoosterEnabled: true,
+    globalVolume: 1.0,
+    perDomainVolume: {},
+    volumeBoostLimit: 5.0,
+    // Marker functionality
+    markers: {} // Store video markers per URL
   };
+
+  // Volume boost context and nodes
+  let volumeContext = null;
+  let volumeNodes = new WeakMap(); // Map elements to their volume nodes
 
   /**
    * VideoController class - Creates and manages visual speed controller overlay
@@ -386,6 +404,52 @@
   let debounceTimer = null;
   
   console.log('OneTab Media: Enhanced content script loaded on', window.location.href);
+
+  /**
+   * Show temporary notification to user
+   */
+  function showTemporaryNotification(message, duration = 2000) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      color: white !important;
+      padding: 10px 15px !important;
+      border-radius: 5px !important;
+      font-family: Arial, sans-serif !important;
+      font-size: 14px !important;
+      z-index: 10000 !important;
+      pointer-events: none !important;
+      transition: opacity 0.3s ease !important;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after duration
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }
+    }, duration);
+  }
+
+  /**
+   * Format time in MM:SS format
+   */
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
 
   /**
    * Initialize content script
@@ -755,6 +819,68 @@
             }
           });
           console.log('Speed controller display toggled');
+          break;
+
+        case 'mark':
+          // Set marker at current position for all active videos
+          activeMediaElements.forEach(element => {
+            if (element.tagName.toLowerCase() === 'video' && element.currentTime !== undefined) {
+              const url = window.location.href;
+              const marker = element.currentTime;
+              
+              if (!speedSettings.markers[url]) {
+                speedSettings.markers[url] = {};
+              }
+              speedSettings.markers[url][element.src || element.currentSrc || 'default'] = marker;
+              
+              saveSpeedSettings();
+              console.log('Marker set at', marker.toFixed(2), 'seconds');
+              
+              // Show temporary notification
+              showTemporaryNotification(`Marker set at ${formatTime(marker)}`);
+            }
+          });
+          break;
+
+        case 'jump':
+          // Jump to previously set marker
+          activeMediaElements.forEach(element => {
+            if (element.tagName.toLowerCase() === 'video' && element.currentTime !== undefined) {
+              const url = window.location.href;
+              const src = element.src || element.currentSrc || 'default';
+              
+              if (speedSettings.markers[url] && speedSettings.markers[url][src] !== undefined) {
+                element.currentTime = speedSettings.markers[url][src];
+                console.log('Jumped to marker at', speedSettings.markers[url][src].toFixed(2), 'seconds');
+                showTemporaryNotification(`Jumped to marker at ${formatTime(speedSettings.markers[url][src])}`);
+              } else {
+                console.log('No marker found for this video');
+                showTemporaryNotification('No marker found for this video');
+              }
+            }
+          });
+          break;
+
+        case 'volumeUp':
+          // Increase volume for all active media elements
+          activeMediaElements.forEach(element => {
+            if (volumeNodes.has(element)) {
+              const volumeData = volumeNodes.get(element);
+              const newVolume = Math.min(volumeData.currentVolume + value, speedSettings.volumeBoostLimit);
+              setElementVolume(element, newVolume);
+            }
+          });
+          break;
+
+        case 'volumeDown':
+          // Decrease volume for all active media elements
+          activeMediaElements.forEach(element => {
+            if (volumeNodes.has(element)) {
+              const volumeData = volumeNodes.get(element);
+              const newVolume = Math.max(volumeData.currentVolume - value, 0.1);
+              setElementVolume(element, newVolume);
+            }
+          });
           break;
       }
     });
@@ -1187,11 +1313,26 @@
    * Set up message listener for commands from background script
    */
   function setupMessageListener() {
-    browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      switch (message.type) {
-        case 'PAUSE_MEDIA':
-          pauseAllMedia();
-          break;
+      browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    switch (message.type) {
+      case 'PAUSE_MEDIA':
+        pauseAllMedia();
+        break;
+        
+      case 'SET_VOLUME':
+        if (message.volume !== undefined) {
+          try {
+            setAllMediaVolume(message.volume);
+            sendResponse({ success: true, volume: message.volume });
+            console.log(`Content script: Volume set to ${message.volume}`);
+          } catch (error) {
+            console.error('Content script: Failed to set volume:', error);
+            sendResponse({ success: false, error: error.message });
+          }
+        } else {
+          sendResponse({ success: false, error: 'Volume not specified' });
+        }
+        return true; // Indicate we're handling this message asynchronously
           
         case 'SET_SPEED':
           setSpeedForAllMedia(message.speed);
@@ -1391,6 +1532,161 @@
     debounceTimer = setTimeout(callback, delay);
   }
   
+  /**
+   * Initialize volume booster for a media element
+   */
+  function initializeVolumeBooster(element) {
+    if (!speedSettings.volumeBoosterEnabled || volumeNodes.has(element)) {
+      return; // Already initialized or disabled
+    }
+
+    try {
+      // Create or get existing audio context
+      if (!volumeContext) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+          console.log('OneTab Media: Web Audio API not supported');
+          return;
+        }
+        volumeContext = new AudioContext();
+      }
+
+      // Create audio graph: source -> gain -> destination
+      const source = volumeContext.createMediaElementSource(element);
+      const gainNode = volumeContext.createGain();
+      
+      source.connect(gainNode);
+      gainNode.connect(volumeContext.destination);
+      
+      // Apply volume settings
+      const hostname = window.location.hostname;
+      const domainVolume = speedSettings.perDomainVolume[hostname] || speedSettings.globalVolume;
+      const limitedVolume = Math.min(domainVolume, speedSettings.volumeBoostLimit);
+      
+      gainNode.gain.setValueAtTime(limitedVolume, volumeContext.currentTime);
+      
+      // Store the gain node for this element
+      volumeNodes.set(element, {
+        gainNode: gainNode,
+        source: source,
+        currentVolume: limitedVolume
+      });
+
+      console.log(`OneTab Media: Volume booster initialized for ${element.tagName.toLowerCase()} - Volume: ${limitedVolume.toFixed(1)}x`);
+
+    } catch (error) {
+      console.warn('OneTab Media: Failed to initialize volume booster:', error);
+    }
+  }
+
+  /**
+   * Set volume for a media element
+   */
+  function setElementVolume(element, volume) {
+    if (!speedSettings.volumeBoosterEnabled || !volumeNodes.has(element)) {
+      return;
+    }
+
+    try {
+      const volumeData = volumeNodes.get(element);
+      const limitedVolume = Math.max(0.1, Math.min(volume, speedSettings.volumeBoostLimit));
+      
+      volumeData.gainNode.gain.setValueAtTime(limitedVolume, volumeContext.currentTime);
+      volumeData.currentVolume = limitedVolume;
+
+      // Store per-domain volume setting
+      const hostname = window.location.hostname;
+      speedSettings.perDomainVolume[hostname] = limitedVolume;
+      saveSpeedSettings();
+
+      console.log(`OneTab Media: Volume set to ${limitedVolume.toFixed(1)}x for ${hostname}`);
+      showTemporaryNotification(`Volume: ${limitedVolume.toFixed(1)}x`);
+
+    } catch (error) {
+      console.warn('OneTab Media: Failed to set volume:', error);
+    }
+  }
+
+  /**
+   * Set volume for all active media elements
+   */
+  function setAllMediaVolume(volume) {
+    console.log(`setAllMediaVolume called with volume: ${volume}`);
+    console.log(`Volume booster enabled: ${speedSettings.volumeBoosterEnabled}`);
+    console.log(`Active media elements count: ${activeMediaElements.size}`);
+    
+    if (!speedSettings.volumeBoosterEnabled) {
+      console.warn('OneTab Media: Volume booster is disabled, cannot set volume');
+      throw new Error('Volume booster is disabled. Enable it in extension options.');
+    }
+
+    if (activeMediaElements.size === 0) {
+      console.warn('OneTab Media: No active media elements found');
+      throw new Error('No media elements found on this page');
+    }
+
+    try {
+      const limitedVolume = Math.max(0.1, Math.min(volume, speedSettings.volumeBoostLimit));
+      console.log(`Limited volume: ${limitedVolume}`);
+      
+      // Apply volume to all active media elements
+      let volumeAppliedCount = 0;
+      activeMediaElements.forEach(element => {
+        if (volumeNodes.has(element)) {
+          const volumeData = volumeNodes.get(element);
+          volumeData.gainNode.gain.setValueAtTime(limitedVolume, volumeContext.currentTime);
+          volumeData.currentVolume = limitedVolume;
+          volumeAppliedCount++;
+          console.log(`Applied volume to existing element: ${element.tagName}`);
+        } else {
+          // Initialize volume booster for elements that don't have it yet
+          console.log(`Initializing volume booster for element: ${element.tagName}`);
+          initializeVolumeBooster(element);
+          setTimeout(() => {
+            if (volumeNodes.has(element)) {
+              const volumeData = volumeNodes.get(element);
+              volumeData.gainNode.gain.setValueAtTime(limitedVolume, volumeContext.currentTime);
+              volumeData.currentVolume = limitedVolume;
+              console.log(`Applied volume to newly initialized element: ${element.tagName}`);
+            }
+          }, 100);
+        }
+      });
+
+      console.log(`Volume applied to ${volumeAppliedCount} elements immediately`);
+
+      // Store per-domain volume setting
+      const hostname = window.location.hostname;
+      speedSettings.perDomainVolume[hostname] = limitedVolume;
+      saveSpeedSettings();
+
+      console.log(`OneTab Media: Volume set to ${limitedVolume.toFixed(1)}x for all media elements on ${hostname}`);
+      showTemporaryNotification(`Volume: ${limitedVolume.toFixed(1)}x`);
+
+    } catch (error) {
+      console.error('OneTab Media: Failed to set volume for all media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resume audio context if suspended (required for user interaction)
+   */
+  async function resumeAudioContext() {
+    if (volumeContext && volumeContext.state === 'suspended') {
+      try {
+        await volumeContext.resume();
+        console.log('OneTab Media: Audio context resumed');
+      } catch (error) {
+        console.warn('OneTab Media: Failed to resume audio context:', error);
+      }
+    }
+  }
+
+  // Auto-resume audio context on user interaction
+  document.addEventListener('click', resumeAudioContext, { once: true, passive: true });
+  document.addEventListener('keydown', resumeAudioContext, { once: true, passive: true });
+
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     console.log('OneTab Media: DOM still loading, waiting...');

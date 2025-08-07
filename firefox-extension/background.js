@@ -18,31 +18,43 @@ const browserAPI = (function() {
   return null;
 })();
 
-// Default settings - must match options.js
+// Default settings - Enhanced to match original videospeed extension exactly
 const defaultSettings = {
   extensionEnabled: true,
   enabled: true, // Legacy compatibility
   showController: true,
   startHidden: false,
-  rememberSpeed: false,
-  forceLastSavedSpeed: false, // Always apply last saved speed to new videos
-  audioBoolean: false,
-  controllerOpacity: 0.3,
+  rememberSpeed: true, // Enable by default like original
+  forceLastSavedSpeed: false, // Always apply last saved speed to new videos  
+  audioBoolean: true, // Enable on audio by default
+  controllerOpacity: 0.8, // More visible like original
   speed: 1.0, // Default speed for videos
   displayKeyCode: 86, // V key for display toggle
   keyBindings: [
     { action: 'display', key: 86, value: 0, force: false, predefined: true }, // V
-    { action: 'slower', key: 83, value: 0.1, force: false, predefined: true }, // S
-    { action: 'faster', key: 68, value: 0.1, force: false, predefined: true }, // D
+    { action: 'slower', key: 83, value: 0.25, force: false, predefined: true }, // S  
+    { action: 'faster', key: 68, value: 0.25, force: false, predefined: true }, // D
     { action: 'rewind', key: 90, value: 10, force: false, predefined: true }, // Z
     { action: 'advance', key: 88, value: 10, force: false, predefined: true }, // X
     { action: 'reset', key: 82, value: 1.0, force: false, predefined: true }, // R
-    { action: 'fast', key: 71, value: 1.8, force: false, predefined: true } // G
+    { action: 'fast', key: 71, value: 1.8, force: false, predefined: true }, // G
+    { action: 'mark', key: 77, value: 0, force: false, predefined: true }, // M - set marker
+    { action: 'jump', key: 74, value: 0, force: false, predefined: true }, // J - jump to marker
+    { action: 'volumeUp', key: 38, value: 0.1, force: false, predefined: true }, // Up Arrow - increase volume
+    { action: 'volumeDown', key: 40, value: 0.1, force: false, predefined: true } // Down Arrow - decrease volume
   ],
   blacklist: `www.instagram.com
 twitter.com
 imgur.com
-teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, '')
+teams.microsoft.com`.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, ''),
+  // Volume booster settings
+  volumeBoosterEnabled: true,
+  globalVolume: 1.0, // Global volume multiplier
+  perDomainVolume: {}, // Store per-domain volume settings
+  volumeBoostLimit: 5.0, // Maximum volume boost (500%)
+  volumeStep: 0.1, // Volume adjustment increment
+  // Marker functionality
+  markers: {} // Store video markers per URL
 };
 
 /**
@@ -52,9 +64,11 @@ async function initializeExtension() {
   // Log startup
   console.log('UME - Ultimate Media Extention: Background script started');
   
-  // Clear any existing state
-  activeMediaTabs.clear();
-  currentPlayingTab = null;
+  // FIXED: Don't clear existing media tabs on restart - preserve tracked tabs
+  // activeMediaTabs.clear(); // REMOVED - this was causing tabs to disappear!
+  // currentPlayingTab = null; // REMOVED - preserve current playing state
+  
+  console.log(`Preserving ${activeMediaTabs.size} existing media tabs across extension restart`);
   
   // Ensure default settings are applied
   await ensureDefaultSettings();
@@ -185,6 +199,10 @@ function setupMessageListeners() {
         
       case 'PAUSE_TAB':
         pauseTabMedia(message.tabId);
+        return false; // Synchronous response
+        
+      case 'SET_VOLUME':
+        setTabVolume(message.tabId, message.volume);
         return false; // Synchronous response
         
       case 'SPEED_CHANGED':
@@ -409,14 +427,18 @@ function handleMediaPaused(tabId) {
 
 /**
  * Handle when media ends in a tab
+ * FIXED: Don't remove tab when media ends - keep it tracked for potential replay
  */
 function handleMediaEnded(tabId) {
-  console.log(`Media ended in tab ${tabId}`);
+  console.log(`Media ended in tab ${tabId} - keeping tab tracked for potential replay`);
   
-  activeMediaTabs.delete(tabId);
+  // FIXED: Don't remove the tab when media ends - this was causing simultaneous playback!
+  // activeMediaTabs.delete(tabId); // REMOVED - tabs should stay tracked
   
+  // Still clear the current playing tab to allow other tabs to play
   if (currentPlayingTab === tabId) {
     currentPlayingTab = null;
+    console.log(`Cleared currentPlayingTab ${tabId} - other tabs can now play`);
   }
   
   updateBadge();
@@ -442,22 +464,61 @@ function pauseTabMedia(tabId) {
     if (result && typeof result.catch === 'function') {
       result.catch(error => {
         console.warn(`Failed to pause media in tab ${tabId}:`, error);
-        // Tab might be closed or unresponsive, remove from active tabs
-        activeMediaTabs.delete(tabId);
-        if (currentPlayingTab === tabId) {
-          currentPlayingTab = null;
-        }
-        updateBadge();
+        // FIXED: Don't remove tab on communication failure - keep it tracked
+        // activeMediaTabs.delete(tabId); // REMOVED - this was causing tab loss!
+        // Tab communication can fail for many reasons (network, suspended tab, etc.)
+        // But the tab should remain tracked as it still contains media
+        console.log(`Keeping tab ${tabId} tracked despite pause communication failure`);
       });
     }
   } catch (error) {
     console.warn(`Failed to pause media in tab ${tabId}:`, error);
-    // Tab might be closed or unresponsive, remove from active tabs
-    activeMediaTabs.delete(tabId);
-    if (currentPlayingTab === tabId) {
-      currentPlayingTab = null;
+    // FIXED: Don't remove tab on communication failure - keep it tracked  
+    // activeMediaTabs.delete(tabId); // REMOVED - this was causing tab loss!
+    // if (currentPlayingTab === tabId) {
+    //   currentPlayingTab = null;
+    // }
+    // updateBadge();
+    console.log(`Keeping tab ${tabId} tracked despite pause error`);
+  }
+}
+
+/**
+ * Set volume for media in a specific tab
+ */
+function setTabVolume(tabId, volume) {
+  if (!tabId) {
+    console.error('setTabVolume: tabId is required');
+    return;
+  }
+  
+  if (volume === undefined || volume === null) {
+    console.error('setTabVolume: volume is required');
+    return;
+  }
+  
+  console.log(`Setting volume to ${volume} for tab ${tabId}`);
+  
+  try {
+    const result = browserAPI.tabs.sendMessage(tabId, {
+      type: 'SET_VOLUME',
+      volume: volume
+    });
+    
+    // Handle both Chrome (returns Promise) and Firefox (may return undefined)
+    if (result && typeof result.catch === 'function') {
+      result.then(response => {
+        if (response && response.success) {
+          console.log(`Volume successfully set to ${response.volume} for tab ${tabId}`);
+        } else {
+          console.warn(`Failed to set volume for tab ${tabId}:`, response?.error || 'Unknown error');
+        }
+      }).catch(error => {
+        console.warn(`Failed to set volume in tab ${tabId}:`, error);
+      });
     }
-    updateBadge();
+  } catch (error) {
+    console.warn(`Failed to send volume message to tab ${tabId}:`, error);
   }
 }
 
@@ -691,21 +752,19 @@ function broadcastSettingsUpdate(settings) {
 }
 
 /**
- * Set up periodic cleanup to verify tabs are still valid and contain active media
+ * Set up periodic cleanup to verify tabs are still valid
+ * ULTRA CONSERVATIVE: Only removes tabs that are closed or navigate to different sites
+ * Never removes tabs based on media state - paused media tabs stay tracked indefinitely
  */
 function setupPeriodicCleanup() {
-  // Run cleanup every 5 minutes
+  // Run cleanup every 15 minutes - only removes closed/navigated tabs
   setInterval(async () => {
     try {
-      console.log('Running periodic media tab cleanup...');
-      const currentTime = Date.now();
-      const staleThreshold = 30 * 60 * 1000; // 30 minutes
+      console.log('Running ultra-conservative media tab cleanup - only removing closed/navigated tabs...');
       const tabsToRemove = [];
       
       // Check each tracked tab
       for (const [tabId, tabInfo] of activeMediaTabs.entries()) {
-        const ageMinutes = (currentTime - tabInfo.timestamp) / 60000;
-        
         try {
           // Verify tab still exists and is accessible
           const tab = await browserAPI.tabs.get(tabId);
@@ -716,14 +775,7 @@ function setupPeriodicCleanup() {
             continue;
           }
           
-          // Check if tab has been inactive for too long (30+ minutes)
-          if (currentTime - tabInfo.timestamp > staleThreshold) {
-            console.log(`Removing stale tab ${tabId} (inactive for ${ageMinutes.toFixed(1)} minutes)`);
-            tabsToRemove.push(tabId);
-            continue;
-          }
-          
-          // Verify the tab still has the expected content by checking URL
+          // URL hostname check - only remove if navigated to completely different site
           if (tab.url && tabInfo.url) {
             try {
               const currentHostname = new URL(tab.url).hostname;
@@ -732,10 +784,32 @@ function setupPeriodicCleanup() {
               if (currentHostname !== trackedHostname) {
                 console.log(`Removing tab ${tabId} - hostname changed from ${trackedHostname} to ${currentHostname}`);
                 tabsToRemove.push(tabId);
+                continue;
               }
             } catch (urlError) {
-              console.warn(`Could not parse URLs for tab ${tabId}, keeping in tracking`);
+              // URL parsing error, but don't remove tab just for this
+              console.log(`URL parsing error for tab ${tabId}, but keeping in tracking`);
             }
+          }
+          
+          // ULTRA CONSERVATIVE: Never remove tabs based on media state
+          // Once a tab has had media, keep it tracked until tab is closed or navigates away
+          // Update timestamp to show tab is still being tracked
+          tabInfo.timestamp = Date.now();
+          console.log(`Tab ${tabId} remains tracked - will persist until tab closes or navigates to different site`);
+          
+          // Optional: Still ping to update media state info, but never remove based on response
+          try {
+            const response = await browserAPI.tabs.sendMessage(tabId, {
+              type: 'GET_MEDIA_STATE'
+            });
+            
+            if (response) {
+              console.log(`Tab ${tabId} media state: ${response.hasActiveMedia ? 'has media' : 'no media'} (keeping tracked regardless)`);
+            }
+          } catch (pingError) {
+            // Communication failed, but we keep the tab tracked anyway
+            console.log(`Tab ${tabId} communication failed, but keeping in tracking (tab may be suspended)`);
           }
           
         } catch (tabError) {
@@ -745,7 +819,7 @@ function setupPeriodicCleanup() {
         }
       }
       
-      // Remove stale tabs
+      // Remove tabs that should be removed
       let removedCount = 0;
       tabsToRemove.forEach(tabId => {
         if (activeMediaTabs.has(tabId)) {
@@ -758,19 +832,19 @@ function setupPeriodicCleanup() {
       });
       
       if (removedCount > 0) {
-        console.log(`Periodic cleanup removed ${removedCount} stale media tabs`);
+        console.log(`Ultra-conservative cleanup removed ${removedCount} tabs (only closed tabs or different hostnames)`);
         updateBadge();
         notifyPopupStateChange();
       } else {
-        console.log('Periodic cleanup: all media tabs are still valid');
+        console.log('Ultra-conservative cleanup: all media tabs still open and on same domains');
       }
       
     } catch (error) {
-      console.error('Error during periodic media tab cleanup:', error);
+      console.error('Error during conservative media tab cleanup:', error);
     }
-  }, 5 * 60 * 1000); // Every 5 minutes
+  }, 15 * 60 * 1000); // Every 15 minutes
   
-  console.log('Periodic media tab cleanup scheduled (every 5 minutes)');
+  console.log('Conservative media tab cleanup scheduled (every 15 minutes, no time-based removal)');
 }
 
 // Initialize when background script loads

@@ -1,0 +1,99 @@
+================================================================================
+UME - Ultimate Media Extension - PATCH LOG v2.2
+================================================================================
+
+RELEASE DATE: December 2024
+SEVERITY: CRITICAL BUG FIX
+
+================================================================================
+ISSUES FIXED
+================================================================================
+
+PROBLEM: Media tabs losing tracking over time
+- Tabs with media open for extended periods stopped being recognized
+- Caused pause functionality to fail when switching between old tabs
+- Users reported videos in "old" tabs wouldn't pause other playing media
+
+ROOT CAUSE: Overly aggressive URL cleanup logic
+- Extension removed tabs from tracking on ANY URL change
+- Affected normal website behavior like SPA routing, hash changes, etc.
+- YouTube, Netflix, and other sites constantly update URLs during playback
+
+
+
+================================================================================
+SOLUTIONS IMPLEMENTED
+================================================================================
+
+1. INTELLIGENT URL CHANGE DETECTION
+   ✅ Only removes tabs when hostname changes (actual navigation)
+   ✅ Preserves tracking for same-site URL changes
+   ✅ Updates activity timestamp for tracked tabs
+   ✅ Handles URL parsing errors gracefully
+
+2. PERIODIC CLEANUP SYSTEM
+   ✅ Runs every 5 minutes to verify tab validity
+   ✅ 30-minute inactivity threshold before removal
+   ✅ Handles discarded/closed/inaccessible tabs
+   ✅ Comprehensive debug logging
+
+================================================================================
+FILES MODIFIED
+================================================================================
+
+chrome-extension/background.js
+- Enhanced setupTabListeners() function
+- Added setupPeriodicCleanup() function
+- Improved URL change detection logic
+
+firefox-extension/background.js  
+- Enhanced setupTabListeners() function
+- Added setupPeriodicCleanup() function
+- Improved URL change detection logic
+
+
+
+chrome-extension/manifest.json
+- Version updated to 2.2
+
+firefox-extension/manifest.json
+- Version updated to 2.2
+
+================================================================================
+TESTING SCENARIOS
+================================================================================
+
+✅ Long-running tabs (hours) maintain media tracking
+✅ YouTube navigation preserves tab tracking  
+✅ SPA routing doesn't break functionality
+✅ Hash/query parameter changes handled correctly
+✅ Actual site navigation properly removes tracking
+✅ Periodic cleanup removes truly stale tabs
+✅ Cross-tab pause functionality works reliably
+
+================================================================================
+USER IMPACT
+================================================================================
+
+BEFORE v2.2:
+❌ Media tabs lost after URL changes
+❌ Inconsistent pause behavior
+❌ Long-running tabs became unmanaged
+
+AFTER v2.2:  
+✅ Reliable tracking across all scenarios
+✅ Consistent pause functionality
+✅ Supports modern web applications
+✅ Better performance with smart cleanup
+
+================================================================================
+DEPLOYMENT NOTES
+================================================================================
+
+- No user data migration required
+- Settings and preferences preserved
+- Automatic background improvements
+- Enhanced debug logging available in console
+- Compatible with all previously supported browsers
+
+================================================================================

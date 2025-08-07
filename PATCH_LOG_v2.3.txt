@@ -1,0 +1,105 @@
+================================================================================
+UME - Ultimate Media Extension - PATCH LOG v2.3
+================================================================================
+
+RELEASE DATE: December 2024
+SEVERITY: MAJOR USABILITY ENHANCEMENT
+
+================================================================================
+ISSUE FIXED
+================================================================================
+
+PROBLEM: Keyboard shortcuts not working in fullscreen mode
+- Speed control shortcuts (S/D, Z/X, R, G, V) completely broken in fullscreen
+- Users forced to exit fullscreen to change video speed
+- Affected all major video sites (YouTube, Netflix, Vimeo, etc.)
+- Created frustrating interruptions during video watching experience
+
+ROOT CAUSE: Document-only keyboard event listeners
+- Events only attached to document level
+- Fullscreen mode changes focus context and event propagation
+- Video players capture keyboard events before reaching document listeners
+- No fallback mechanism for fullscreen scenarios
+
+================================================================================
+SOLUTION IMPLEMENTED
+================================================================================
+
+ENHANCED KEYBOARD EVENT HANDLING SYSTEM
+   ✅ Dual event listeners (document + video elements)
+   ✅ Fullscreen state change detection (all browser prefixes)
+   ✅ Automatic focus management for fullscreen elements
+   ✅ Enhanced event prevention (preventDefault/stopPropagation)
+   ✅ Cross-browser compatibility (Chrome/Firefox/Safari/Edge)
+   ✅ Video element focus capability with tabindex="-1"
+   ✅ Proper cleanup of video-level event listeners
+
+================================================================================
+FILES MODIFIED
+================================================================================
+
+chrome-extension/content.js
+- Refactored keyboard event handling into handleKeyboardEvent() function
+- Added handleFullscreenChange() function
+- Enhanced attachMediaListeners() to add video-level keyboard listeners
+- Updated cleanupMediaElement() to remove video-level listeners
+- Added tabindex="-1" to video elements for keyboard focus
+
+firefox-extension/content.js
+- Refactored keyboard event handling into handleKeyboardEvent() function
+- Added handleFullscreenChange() function
+- Enhanced attachMediaListeners() to add video-level keyboard listeners
+- Updated cleanupMediaElement() to remove video-level listeners
+- Added tabindex="-1" to video elements for keyboard focus
+
+chrome-extension/manifest.json
+- Version updated to 2.3
+
+firefox-extension/manifest.json
+- Version updated to 2.3
+
+================================================================================
+TESTING SCENARIOS
+================================================================================
+
+Fullscreen Keyboard Tests:
+✅ All shortcuts work in YouTube fullscreen (S/D/R/Z/X/V/G)
+✅ All shortcuts work in Netflix fullscreen
+✅ All shortcuts work in Vimeo fullscreen
+✅ All shortcuts work in Twitch fullscreen
+✅ All shortcuts work in HTML5 video fullscreen
+✅ Fullscreen entry/exit detection working
+✅ No conflicts with native player controls
+✅ Cross-browser compatibility verified
+✅ Event focus management working correctly
+✅ Proper event cleanup on element removal
+
+================================================================================
+USER IMPACT
+================================================================================
+
+BEFORE v2.3:
+❌ Fullscreen keyboard shortcuts completely broken
+❌ Users forced to exit fullscreen to change speed
+❌ Frustrating interruptions during video watching
+❌ Inconsistent behavior across different video sites
+
+AFTER v2.3:  
+✅ Fullscreen keyboard shortcuts work perfectly
+✅ Seamless speed control during fullscreen viewing
+✅ No interruptions or need to exit fullscreen
+✅ Consistent behavior across all video platforms
+✅ Enhanced user experience for fullscreen video watching
+
+================================================================================
+DEPLOYMENT NOTES
+================================================================================
+
+- No user data migration required
+- Settings and preferences preserved
+- Automatic background improvements
+- Enhanced debug logging available in console
+- Compatible with all previously supported browsers
+- Works immediately upon installation/update
+
+================================================================================

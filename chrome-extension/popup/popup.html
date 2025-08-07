@@ -86,6 +86,49 @@
           </ul>
         </div>
       </div>
+      
+      <div class="volume-control-section" id="volumeControlSection">
+        <h2 class="section-title">Volume Booster</h2>
+        <div class="volume-info">
+          <span class="volume-label">Current Volume:</span>
+          <span class="volume-value" id="currentVolume">100%</span>
+        </div>
+        <div class="volume-controls">
+          <div class="volume-slider-container">
+            <input type="range" id="volumeSlider" class="volume-slider" 
+                   min="10" max="500" step="10" value="100">
+            <div class="volume-scale">
+              <span class="scale-mark">10%</span>
+              <span class="scale-mark">100%</span>
+              <span class="scale-mark">500%</span>
+            </div>
+          </div>
+          <div class="volume-buttons">
+            <button class="volume-btn" id="volumeDownBtn" title="Decrease volume (↓)">
+              <span class="volume-icon">🔉</span>
+              <span class="volume-text">-10%</span>
+            </button>
+            <button class="volume-btn" id="volumeResetBtn" title="Reset to 100%">
+              <span class="volume-icon">🔊</span>
+              <span class="volume-text">100%</span>
+            </button>
+            <button class="volume-btn" id="volumeUpBtn" title="Increase volume (↑)">
+              <span class="volume-icon">📢</span>
+              <span class="volume-text">+10%</span>
+            </button>
+          </div>
+        </div>
+        <div class="volume-instructions">
+          <p class="instruction-text">
+            <strong>⚠️ Volume Warning:</strong> High volumes can damage hearing!
+          </p>
+          <ul class="instruction-list">
+            <li><strong>Keyboard shortcuts:</strong> ↑ (louder), ↓ (quieter)</li>
+            <li><strong>Safety limit:</strong> Maximum 500% volume</li>
+            <li><strong>Per-domain:</strong> Settings saved for each website</li>
+          </ul>
+        </div>
+      </div>
     </div>
     
     <footer class="popup-footer">

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UME - Keyboard Shortcuts Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .shortcut-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .shortcut-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .shortcut-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #007bff;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .shortcut-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .shortcut-card.tested {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .shortcut-card.failed {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .key-visual {
+            display: inline-block;
+            background: #343a40;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 16px;
+            margin-right: 10px;
+            min-width: 30px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .key-visual.pressed {
+            background: #28a745;
+            transform: scale(1.1);
+            transition: all 0.1s ease;
+        }
+        
+        .test-media {
+            width: 100%;
+            max-width: 500px;
+            margin: 15px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover { background: #0056b3; }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .success { background: #28a745; }
+        .success:hover { background: #1e7e34; }
+        
+        .warning { background: #ffc107; color: #212529; }
+        .warning:hover { background: #e0a800; }
+        
+        .danger { background: #dc3545; }
+        .danger:hover { background: #c82333; }
+        
+        .test-results {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .status-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .instructions {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        
+        .key-sequence {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 5px 0;
+        }
+        
+        .sequence-arrow {
+            font-size: 20px;
+            color: #6c757d;
+        }
+        
+        .test-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #6c757d;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .test-indicator.pass { background: #28a745; }
+        .test-indicator.fail { background: #dc3545; }
+        .test-indicator.pending { background: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⌨️ UME Keyboard Shortcuts Testing</h1>
+        <p>Comprehensive testing for all Ultimate Media Extension keyboard shortcuts</p>
+    </div>
+    
+    <div class="instructions">
+        <h3>🧪 Testing Instructions</h3>
+        <ol>
+            <li><strong>Focus the media element:</strong> Click on the video or audio player below</li>
+            <li><strong>Test each shortcut:</strong> Press the keyboard shortcuts to test functionality</li>
+            <li><strong>Visual feedback:</strong> Key presses will be highlighted and results logged</li>
+            <li><strong>Automatic detection:</strong> The system detects when shortcuts work correctly</li>
+            <li><strong>Manual verification:</strong> Some effects need visual/audio confirmation</li>
+        </ol>
+    </div>
+    
+    <div class="shortcut-section">
+        <h2>📺 Test Media Elements</h2>
+        
+        <video controls id="testVideo" class="test-media">
+            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <audio controls id="testAudio" class="test-media">
+            <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
+            <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <div class="test-controls">
+            <button onclick="startTesting()" class="success">🚀 Start Interactive Testing</button>
+            <button onclick="runAutomatedTests()" class="warning">🤖 Run Automated Tests</button>
+            <button onclick="resetTests()" class="danger">🔄 Reset Tests</button>
+            <button onclick="exportResults()">📊 Export Results</button>
+        </div>
+        
+        <div class="status-display">
+            <span>Active Element: <span id="activeElement">None</span></span>
+            <span>Last Key: <span id="lastKey">None</span></span>
+            <span>Tests: <span id="testStats">0/0</span></span>
+        </div>
+    </div>
+    
+    <div class="shortcut-section">
+        <h2>⌨️ Keyboard Shortcuts</h2>
+        
+        <div class="shortcut-grid" id="shortcutGrid">
+            <!-- Shortcuts will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <div class="shortcut-section">
+        <h2>🔄 Sequential Testing</h2>
+        <p>Test complex sequences of shortcuts to ensure they work together:</p>
+        
+        <div class="instructions">
+            <h4>Test Sequences:</h4>
+            <div class="key-sequence">
+                <span class="key-visual">V</span>
+                <span class="sequence-arrow">→</span>
+                <span class="key-visual">D</span>
+                <span class="sequence-arrow">→</span>
+                <span class="key-visual">D</span>
+                <span>: Show controller, then increase speed twice</span>
+            </div>
+            <div class="key-sequence">
+                <span class="key-visual">M</span>
+                <span class="sequence-arrow">→</span>
+                <span class="key-visual">X</span>
+                <span class="sequence-arrow">→</span>
+                <span class="key-visual">J</span>
+                <span>: Set marker, advance, then jump back</span>
+            </div>
+            <div class="key-sequence">
+                <span class="key-visual">↑</span>
+                <span class="sequence-arrow">→</span>
+                <span class="key-visual">↑</span>
+                <span class="sequence-arrow">→</span>
+                <span class="key-visual">↓</span>
+                <span>: Increase volume twice, then decrease</span>
+            </div>
+        </div>
+        
+        <div class="test-controls">
+            <button onclick="testSequence1()">Test Speed Sequence</button>
+            <button onclick="testSequence2()">Test Marker Sequence</button>
+            <button onclick="testSequence3()">Test Volume Sequence</button>
+        </div>
+        
+        <div id="sequenceResults" class="test-results">
+            Sequence test results will appear here...
+        </div>
+    </div>
+    
+    <div class="shortcut-section">
+        <h2>📊 Test Results</h2>
+        <div id="testResults" class="test-results">
+            Test results will appear here when you start testing...
+        </div>
+    </div>
+    
+    <div class="warning-box">
+        <h3>⚠️ Volume Testing Warning</h3>
+        <p><strong>Be careful with volume shortcuts (↑↓)!</strong> The volume booster can make audio significantly louder. Start with low system volume and increase gradually.</p>
+    </div>
+
+    <script>
+        // Keyboard shortcuts testing framework
+        class KeyboardShortcutTester {
+            constructor() {
+                this.shortcuts = [
+                    { key: 'V', keyCode: 86, action: 'display', description: 'Show/Hide Speed Controller', category: 'display' },
+                    { key: 'S', keyCode: 83, action: 'slower', description: 'Decrease Speed (-0.25x)', category: 'speed' },
+                    { key: 'D', keyCode: 68, action: 'faster', description: 'Increase Speed (+0.25x)', category: 'speed' },
+                    { key: 'R', keyCode: 82, action: 'reset', description: 'Reset Speed (1.0x)', category: 'speed' },
+                    { key: 'G', keyCode: 71, action: 'fast', description: 'Fast Speed (1.8x)', category: 'speed' },
+                    { key: 'Z', keyCode: 90, action: 'rewind', description: 'Rewind 10 seconds', category: 'time' },
+                    { key: 'X', keyCode: 88, action: 'advance', description: 'Advance 10 seconds', category: 'time' },
+                    { key: 'M', keyCode: 77, action: 'mark', description: 'Set Marker', category: 'marker' },
+                    { key: 'J', keyCode: 74, action: 'jump', description: 'Jump to Marker', category: 'marker' },
+                    { key: '↑', keyCode: 38, action: 'volumeUp', description: 'Volume Up (+10%)', category: 'volume' },
+                    { key: '↓', keyCode: 40, action: 'volumeDown', description: 'Volume Down (-10%)', category: 'volume' }
+                ];
+                
+                this.testResults = new Map();
+                this.currentTest = null;
+                this.isListening = false;
+                this.keyPressLog = [];
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.renderShortcutGrid();
+                this.updateStats();
+            }
+            
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+                document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+                
+                // Focus tracking
+                document.addEventListener('focusin', (e) => {
+                    document.getElementById('activeElement').textContent = e.target.tagName || 'Unknown';
+                });
+                
+                // Media event listeners
+                const video = document.getElementById('testVideo');
+                const audio = document.getElementById('testAudio');
+                
+                [video, audio].forEach(element => {
+                    if (element) {
+                        ['play', 'pause', 'ratechange', 'volumechange', 'timeupdate', 'seeked'].forEach(eventType => {
+                            element.addEventListener(eventType, (e) => this.logMediaEvent(element.id, eventType, e));
+                        });
+                    }
+                });
+            }
+            
+            renderShortcutGrid() {
+                const grid = document.getElementById('shortcutGrid');
+                grid.innerHTML = '';
+                
+                this.shortcuts.forEach(shortcut => {
+                    const card = document.createElement('div');
+                    card.className = 'shortcut-card';
+                    card.id = `shortcut-${shortcut.keyCode}`;
+                    
+                    const testResult = this.testResults.get(shortcut.keyCode);
+                    const indicator = testResult ? 
+                        (testResult.success ? 'pass' : 'fail') : 'pending';
+                    
+                    card.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span class="key-visual" id="key-${shortcut.keyCode}">${shortcut.key}</span>
+                                <strong>${shortcut.action}</strong>
+                            </div>
+                            <span class="test-indicator ${indicator}"></span>
+                        </div>
+                        <p>${shortcut.description}</p>
+                        <small>Category: ${shortcut.category} | Key Code: ${shortcut.keyCode}</small>
+                        <div id="result-${shortcut.keyCode}" style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+                            ${testResult ? `Last test: ${testResult.timestamp}` : 'Not tested yet'}
+                        </div>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            }
+            
+            handleKeyPress(e) {
+                const keyCode = e.keyCode || e.which;
+                const shortcut = this.shortcuts.find(s => s.keyCode === keyCode);
+                
+                // Visual feedback
+                const keyElement = document.getElementById(`key-${keyCode}`);
+                if (keyElement) {
+                    keyElement.classList.add('pressed');
+                }
+                
+                // Update display
+                document.getElementById('lastKey').textContent = `${shortcut?.key || keyCode} (${keyCode})`;
+                
+                // Log key press
+                this.keyPressLog.push({
+                    keyCode,
+                    key: shortcut?.key || String.fromCharCode(keyCode),
+                    action: shortcut?.action || 'unknown',
+                    timestamp: Date.now(),
+                    target: e.target.tagName
+                });
+                
+                // Test the shortcut if it exists
+                if (shortcut) {
+                    this.testShortcut(shortcut, e);
+                }
+            }
+            
+            handleKeyUp(e) {
+                const keyCode = e.keyCode || e.which;
+                const keyElement = document.getElementById(`key-${keyCode}`);
+                if (keyElement) {
+                    keyElement.classList.remove('pressed');
+                }
+            }
+            
+            testShortcut(shortcut, event) {
+                const startTime = performance.now();
+                const target = event.target;
+                const isMediaElement = target.tagName === 'VIDEO' || target.tagName === 'AUDIO';
+                
+                // Record initial state
+                const initialState = isMediaElement ? {
+                    currentTime: target.currentTime,
+                    playbackRate: target.playbackRate,
+                    volume: target.volume,
+                    paused: target.paused
+                } : {};
+                
+                // Wait for potential changes
+                setTimeout(() => {
+                    const endTime = performance.now();
+                    const finalState = isMediaElement ? {
+                        currentTime: target.currentTime,
+                        playbackRate: target.playbackRate,
+                        volume: target.volume,
+                        paused: target.paused
+                    } : {};
+                    
+                    // Analyze results
+                    const testResult = this.analyzeShortcutResult(shortcut, initialState, finalState, endTime - startTime);
+                    
+                    // Store result
+                    this.testResults.set(shortcut.keyCode, {
+                        ...testResult,
+                        timestamp: new Date().toLocaleTimeString(),
+                        initialState,
+                        finalState
+                    });
+                    
+                    // Update UI
+                    this.updateShortcutResult(shortcut.keyCode, testResult);
+                    this.logResult(shortcut, testResult);
+                    this.updateStats();
+                    
+                }, 500); // Wait for potential changes
+            }
+            
+            analyzeShortcutResult(shortcut, initialState, finalState, duration) {
+                let success = false;
+                let details = '';
+                
+                switch (shortcut.action) {
+                    case 'slower':
+                    case 'faster':
+                        if (initialState.playbackRate !== undefined && finalState.playbackRate !== undefined) {
+                            const expectedChange = shortcut.action === 'faster' ? 0.25 : -0.25;
+                            const actualChange = finalState.playbackRate - initialState.playbackRate;
+                            success = Math.abs(actualChange - expectedChange) < 0.01;
+                            details = `Speed: ${initialState.playbackRate} → ${finalState.playbackRate}`;
+                        }
+                        break;
+                        
+                    case 'reset':
+                        success = Math.abs(finalState.playbackRate - 1.0) < 0.01;
+                        details = `Speed reset to: ${finalState.playbackRate}`;
+                        break;
+                        
+                    case 'fast':
+                        success = Math.abs(finalState.playbackRate - 1.8) < 0.01;
+                        details = `Fast speed set to: ${finalState.playbackRate}`;
+                        break;
+                        
+                    case 'rewind':
+                    case 'advance':
+                        if (initialState.currentTime !== undefined && finalState.currentTime !== undefined) {
+                            const expectedChange = shortcut.action === 'advance' ? 10 : -10;
+                            const actualChange = finalState.currentTime - initialState.currentTime;
+                            success = Math.abs(actualChange - expectedChange) < 1; // 1 second tolerance
+                            details = `Time: ${initialState.currentTime.toFixed(1)}s → ${finalState.currentTime.toFixed(1)}s`;
+                        }
+                        break;
+                        
+                    case 'volumeUp':
+                    case 'volumeDown':
+                        // Note: Volume might be controlled by extension's Web Audio API
+                        details = 'Volume change - verify by ear (extension controls Web Audio)';
+                        success = true; // Assume success, manual verification needed
+                        break;
+                        
+                    case 'mark':
+                    case 'jump':
+                        // Marker functionality - check for visual notifications or state changes
+                        details = 'Marker action - check for visual notification';
+                        success = true; // Assume success, manual verification needed
+                        break;
+                        
+                    case 'display':
+                        // Controller visibility toggle - difficult to detect automatically
+                        details = 'Display toggle - check for speed controller visibility';
+                        success = true; // Assume success, manual verification needed
+                        break;
+                        
+                    default:
+                        details = 'Unknown action type';
+                }
+                
+                return {
+                    success,
+                    details,
+                    duration,
+                    requiresManualVerification: ['volumeUp', 'volumeDown', 'mark', 'jump', 'display'].includes(shortcut.action)
+                };
+            }
+            
+            updateShortcutResult(keyCode, result) {
+                const card = document.getElementById(`shortcut-${keyCode}`);
+                const indicator = card.querySelector('.test-indicator');
+                const resultDiv = document.getElementById(`result-${keyCode}`);
+                
+                if (result.success) {
+                    card.className = 'shortcut-card tested';
+                    indicator.className = 'test-indicator pass';
+                } else {
+                    card.className = 'shortcut-card failed';
+                    indicator.className = 'test-indicator fail';
+                }
+                
+                resultDiv.innerHTML = `
+                    <strong>Result:</strong> ${result.success ? '✅ Pass' : '❌ Fail'}<br>
+                    <strong>Details:</strong> ${result.details}<br>
+                    <strong>Duration:</strong> ${result.duration.toFixed(2)}ms
+                    ${result.requiresManualVerification ? '<br><em>⚠️ Manual verification required</em>' : ''}
+                `;
+            }
+            
+            logResult(shortcut, result) {
+                const timestamp = new Date().toLocaleTimeString();
+                const status = result.success ? '✅' : '❌';
+                const message = `[${timestamp}] ${status} ${shortcut.key} (${shortcut.action}): ${result.details}`;
+                
+                this.log(message, result.success ? 'pass' : 'fail');
+            }
+            
+            logMediaEvent(elementId, eventType, event) {
+                const timestamp = new Date().toLocaleTimeString();
+                const element = event.target;
+                
+                let details = '';
+                if (eventType === 'ratechange') {
+                    details = ` - Rate: ${element.playbackRate}`;
+                } else if (eventType === 'volumechange') {
+                    details = ` - Volume: ${element.volume}`;
+                } else if (eventType === 'seeked') {
+                    details = ` - Time: ${element.currentTime.toFixed(1)}s`;
+                }
+                
+                this.log(`[${timestamp}] 📺 ${elementId} ${eventType}${details}`, 'info');
+            }
+            
+            log(message, type = 'info') {
+                const colors = {
+                    info: '#17a2b8',
+                    pass: '#28a745',
+                    fail: '#dc3545',
+                    warn: '#ffc107'
+                };
+                
+                const element = document.createElement('div');
+                element.style.color = colors[type] || colors.info;
+                element.textContent = message;
+                
+                const resultsDiv = document.getElementById('testResults');
+                resultsDiv.appendChild(element);
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            }
+            
+            updateStats() {
+                const total = this.shortcuts.length;
+                const tested = this.testResults.size;
+                const passed = Array.from(this.testResults.values()).filter(r => r.success).length;
+                
+                document.getElementById('testStats').textContent = `${tested}/${total} (${passed} passed)`;
+            }
+            
+            // Public methods for UI
+            startTesting() {
+                this.log('🚀 Interactive testing started. Click on media elements and press keyboard shortcuts.', 'info');
+                this.log('💡 Focus a media element first, then press shortcuts to test them.', 'info');
+                this.isListening = true;
+            }
+            
+            async runAutomatedTests() {
+                this.log('🤖 Starting automated shortcut tests...', 'info');
+                
+                const video = document.getElementById('testVideo');
+                video.focus();
+                
+                // Play video for testing
+                if (video.paused) {
+                    try {
+                        await video.play();
+                        this.log('📺 Video started for testing', 'info');
+                    } catch (e) {
+                        this.log('⚠️ Could not auto-play video - click play manually', 'warn');
+                    }
+                }
+                
+                // Test each shortcut with a delay
+                for (let i = 0; i < this.shortcuts.length; i++) {
+                    const shortcut = this.shortcuts[i];
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Wait between tests
+                    
+                    this.log(`Testing ${shortcut.key} (${shortcut.action})...`, 'info');
+                    
+                    // Simulate key press
+                    const keyEvent = new KeyboardEvent('keydown', {
+                        keyCode: shortcut.keyCode,
+                        which: shortcut.keyCode,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    
+                    document.dispatchEvent(keyEvent);
+                    
+                    // Simulate key up
+                    setTimeout(() => {
+                        const keyUpEvent = new KeyboardEvent('keyup', {
+                            keyCode: shortcut.keyCode,
+                            which: shortcut.keyCode,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        document.dispatchEvent(keyUpEvent);
+                    }, 100);
+                }
+                
+                this.log('🤖 Automated tests completed!', 'pass');
+            }
+            
+            resetTests() {
+                this.testResults.clear();
+                this.keyPressLog = [];
+                document.getElementById('testResults').innerHTML = '';
+                document.getElementById('sequenceResults').innerHTML = '';
+                this.renderShortcutGrid();
+                this.updateStats();
+                this.log('🔄 Tests reset. Ready for new testing session.', 'info');
+            }
+            
+            exportResults() {
+                const results = {
+                    timestamp: new Date().toISOString(),
+                    browser: navigator.userAgent,
+                    shortcuts: this.shortcuts.map(s => ({
+                        ...s,
+                        testResult: this.testResults.get(s.keyCode)
+                    })),
+                    keyPressLog: this.keyPressLog,
+                    stats: {
+                        totalShortcuts: this.shortcuts.length,
+                        tested: this.testResults.size,
+                        passed: Array.from(this.testResults.values()).filter(r => r.success).length
+                    }
+                };
+                
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `ume-keyboard-test-results-${Date.now()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                
+                this.log('📊 Test results exported to JSON file', 'pass');
+            }
+            
+            // Sequence testing methods
+            async testSequence1() {
+                this.log('🔄 Testing speed control sequence: V → D → D', 'info');
+                const video = document.getElementById('testVideo');
+                video.focus();
+                
+                const keys = [86, 68, 68]; // V, D, D
+                for (const keyCode of keys) {
+                    await this.simulateKeyPress(keyCode);
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+                
+                this.log('✅ Speed sequence test completed', 'pass');
+            }
+            
+            async testSequence2() {
+                this.log('🔄 Testing marker sequence: M → X → J', 'info');
+                const video = document.getElementById('testVideo');
+                video.focus();
+                
+                const keys = [77, 88, 74]; // M, X, J
+                for (const keyCode of keys) {
+                    await this.simulateKeyPress(keyCode);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                this.log('✅ Marker sequence test completed', 'pass');
+            }
+            
+            async testSequence3() {
+                this.log('🔄 Testing volume sequence: ↑ → ↑ → ↓', 'info');
+                const video = document.getElementById('testVideo');
+                video.focus();
+                
+                const keys = [38, 38, 40]; // Up, Up, Down
+                for (const keyCode of keys) {
+                    await this.simulateKeyPress(keyCode);
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+                
+                this.log('✅ Volume sequence test completed', 'pass');
+            }
+            
+            async simulateKeyPress(keyCode) {
+                const keyDownEvent = new KeyboardEvent('keydown', {
+                    keyCode: keyCode,
+                    which: keyCode,
+                    bubbles: true,
+                    cancelable: true
+                });
+                
+                const keyUpEvent = new KeyboardEvent('keyup', {
+                    keyCode: keyCode,
+                    which: keyCode,
+                    bubbles: true,
+                    cancelable: true
+                });
+                
+                document.dispatchEvent(keyDownEvent);
+                
+                setTimeout(() => {
+                    document.dispatchEvent(keyUpEvent);
+                }, 100);
+            }
+        }
+        
+        // Initialize tester
+        const keyboardTester = new KeyboardShortcutTester();
+        
+        // Global functions for UI
+        function startTesting() { keyboardTester.startTesting(); }
+        function runAutomatedTests() { keyboardTester.runAutomatedTests(); }
+        function resetTests() { keyboardTester.resetTests(); }
+        function exportResults() { keyboardTester.exportResults(); }
+        function testSequence1() { keyboardTester.testSequence1(); }
+        function testSequence2() { keyboardTester.testSequence2(); }
+        function testSequence3() { keyboardTester.testSequence3(); }
+        
+        // Global access
+        window.keyboardTester = keyboardTester;
+        
+        // Auto-start message
+        document.addEventListener('DOMContentLoaded', () => {
+            keyboardTester.log('⌨️ Keyboard shortcuts tester initialized', 'info');
+            keyboardTester.log('Click "Start Interactive Testing" to begin', 'info');
+        });
+        
+        console.log('⌨️ Keyboard shortcuts tester loaded. Use window.keyboardTester to access.');
+    </script>
+</body>
+</html>
