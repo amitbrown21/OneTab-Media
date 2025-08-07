@@ -289,6 +289,15 @@ class TestSuiteRunner {
             this.testResults.push(await this.runExtensionFileTests());
             this.testResults.push(await this.runConfigurationTests());
             this.testResults.push(await this.runHTMLValidationTests());
+            // Run the new full extension test suite
+            try {
+                const { runFullExtensionTests } = require('./full-extension-tests');
+                const res = await runFullExtensionTests(this.log.bind(this));
+                this.testResults.push(res);
+            } catch (e) {
+                this.log(`❌ Failed to execute full extension tests: ${e.message}`, 'FAIL');
+                this.testResults.push({ passed: 0, failed: 1 });
+            }
             
             return this.generateTestReport();
         } catch (error) {

@@ -33,6 +33,7 @@
   let currentVolume = 1.0; // Volume multiplier (1.0 = 100%)
   let speedSettings = {};
   let volumeSettings = {};
+  let currentFilter = 'all'; // all | playing | has_media | monitoring
   
   /**
    * Initialize popup when DOM is loaded
@@ -116,6 +117,16 @@
         loadVolumeSettings();
       }
     });
+
+    // Filters
+    const filterAll = document.getElementById('filterAll');
+    const filterPlaying = document.getElementById('filterPlaying');
+    const filterHasMedia = document.getElementById('filterHasMedia');
+    const filterMonitoring = document.getElementById('filterMonitoring');
+    filterAll && filterAll.addEventListener('click', () => { currentFilter = 'all'; renderFiltered(); });
+    filterPlaying && filterPlaying.addEventListener('click', () => { currentFilter = 'playing'; renderFiltered(); });
+    filterHasMedia && filterHasMedia.addEventListener('click', () => { currentFilter = 'has_media'; renderFiltered(); });
+    filterMonitoring && filterMonitoring.addEventListener('click', () => { currentFilter = 'monitoring'; renderFiltered(); });
   }
   
   /**
@@ -295,6 +306,23 @@
       const { tabId, ...tabInfo } = tabData;
       const tabItem = createTabItem(tabId, tabInfo, tabId === currentPlaying);
       tabsList.appendChild(tabItem);
+    });
+  }
+
+  function renderFiltered() {
+    if (!tabsList) return;
+    const items = Array.from(tabsList.children);
+    items.forEach((el) => {
+      const st = el.getAttribute('data-status') || '';
+      if (currentFilter === 'all') {
+        el.style.display = '';
+      } else if (currentFilter === 'playing') {
+        el.style.display = st === 'playing' ? '' : 'none';
+      } else if (currentFilter === 'has_media') {
+        el.style.display = st === 'has_media' ? '' : 'none';
+      } else if (currentFilter === 'monitoring') {
+        el.style.display = st === 'monitoring' ? '' : 'none';
+      }
     });
   }
   

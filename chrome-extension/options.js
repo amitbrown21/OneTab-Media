@@ -225,6 +225,53 @@ function setupEventListeners() {
   if (restoreButton) {
     restoreButton.addEventListener('click', restoreDefaults);
   }
+
+  // Export settings
+  const exportBtn = document.getElementById('exportSettings');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      try {
+        const data = await browserAPI.storage.sync.get(Object.keys(defaultSettings));
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ume-settings.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showStatus('Settings exported', 'success', 1500);
+      } catch (e) {
+        showStatus('Failed to export settings', 'error');
+      }
+    });
+  }
+
+  // Import settings
+  const importBtn = document.getElementById('importSettings');
+  if (importBtn) {
+    importBtn.addEventListener('click', async () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+          await browserAPI.storage.sync.set(json);
+          await loadSettings();
+          showStatus('Settings imported', 'success', 1500);
+          broadcastSettingsUpdate(json);
+        } catch (err) {
+          showStatus('Invalid settings file', 'error');
+        }
+      };
+      input.click();
+    });
+  }
   
   // Add shortcut button
   const addButton = document.getElementById('addShortcut');

@@ -9,6 +9,10 @@ let potentialMediaTabs = new Map(); // tabId -> { url, title, status, timestamp 
 let currentPlayingTab = null;
 let isExtensionEnabled = true; // Extension enabled by default
 
+// Cleanup thresholds (used by tests and for scheduling)
+const staleThreshold = 2 * 60 * 60 * 10000; // 2 hours
+const cleanupIntervalMs = 10 * 60 * 1000; // 10 minutes
+
 // Comprehensive list of common media/audio/video streaming sites
 const MEDIA_SITES = [
   // Global video platforms
@@ -1045,9 +1049,9 @@ function setupPeriodicCleanup() {
     } catch (error) {
       console.error('Error during conservative media tab cleanup:', error);
     }
-  }, 15 * 60 * 1000); // Every 15 minutes
+  }, cleanupIntervalMs); // Every 10 minutes
   
-  console.log('Conservative media tab cleanup scheduled (every 15 minutes, no time-based removal)');
+  console.log('Conservative media tab cleanup scheduled (every 10 minutes, no time-based removal)');
 }
 
 // Initialize when background script loads
