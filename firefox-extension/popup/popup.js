@@ -25,6 +25,7 @@
   let volumeControlSection, currentVolumeDisplay, volumeSlider;
   let volumeUpBtn, volumeDownBtn, volumeResetBtn;
   let optionsButton;
+  let themeToggle, themeLabel;
   
   // State
   let currentTabs = [];
@@ -46,6 +47,8 @@
     
     // Load extension settings
     loadExtensionSettings();
+    // Load theme
+    applyStoredTheme();
     
     // Load initial data
     loadTabsData();
@@ -85,6 +88,8 @@
     volumeResetBtn = document.getElementById('volumeResetBtn');
     
     optionsButton = document.getElementById('optionsButton');
+    themeToggle = document.getElementById('themeToggle');
+    themeLabel = document.getElementById('themeLabel');
   }
   
   /**
@@ -102,6 +107,8 @@
     
     // Extension toggle
     extensionToggle?.addEventListener('change', handleExtensionToggle);
+    // Theme toggle
+    themeToggle?.addEventListener('change', handleThemeToggle);
     
     // Volume control event listeners
     volumeSlider?.addEventListener('input', handleVolumeSliderChange);
@@ -166,6 +173,65 @@
       popupContainer.classList.toggle('disabled', !isExtensionEnabled);
     }
   }
+
+  async function applyStoredTheme() {
+    try {
+      let result;
+      if (typeof browser !== 'undefined' && browser.storage && browser.storage.sync && typeof browser.storage.sync.get === 'function') {
+        result = await browser.storage.sync.get(['theme']);
+      } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync && typeof chrome.storage.sync.get === 'function') {
+        result = await new Promise((resolve, reject) => {
+          chrome.storage.sync.get(['theme'], (data) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(data);
+            }
+          });
+        });
+      }
+      const theme = (result && typeof result.theme === 'string' ? result.theme : null) || 'light';
+      setTheme(theme);
+    } catch (error) {
+      setTheme('light');
+    }
+  }
+
+  function setTheme(theme) {
+    const isDark = theme === 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    if (themeToggle) themeToggle.checked = isDark;
+    if (themeLabel) themeLabel.textContent = isDark ? 'Dark' : 'Light';
+    try { localStorage.setItem('ume_theme', theme); } catch (_) {}
+  }
+
+  async function handleThemeToggle() {
+    const newTheme = themeToggle?.checked ? 'dark' : 'light';
+    setTheme(newTheme);
+    try {
+      if (typeof browser !== 'undefined' && browser.storage && browser.storage.sync && typeof browser.storage.sync.set === 'function') {
+        await browser.storage.sync.set({ theme: newTheme });
+      } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync && typeof chrome.storage.sync.set === 'function') {
+        await new Promise((resolve, reject) => {
+          chrome.storage.sync.set({ theme: newTheme }, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
+    } catch (e) {}
+  }
+
+  // Fallback to last-set theme quickly
+  try {
+    const cachedTheme = localStorage.getItem('ume_theme');
+    if (cachedTheme === 'dark' || cachedTheme === 'light') {
+      document.documentElement.setAttribute('data-theme', cachedTheme);
+    }
+  } catch (_) {}
   
   /**
    * Handle extension toggle change

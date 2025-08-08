@@ -113,6 +113,8 @@ const browserAPI = (function() {
 const defaultSettings = {
   extensionEnabled: true,
   enabled: true, // Legacy compatibility
+  // Theme settings
+  theme: 'light', // 'light' | 'dark'
   showController: true,
   startHidden: false,
   rememberSpeed: true, // Enable by default like original
@@ -856,6 +858,7 @@ async function getSpeedSettings() {
       'displayKeyCode',
       'keyBindings',
       'blacklist',
+      'theme',
       'videoSpeedSettings', // Legacy support
       'videoSpeedEnabled',  // Legacy support
       'lastSpeed'          // Legacy support
@@ -872,6 +875,7 @@ async function getSpeedSettings() {
       displayKeyCode: result.displayKeyCode || 86,
       keyBindings: result.keyBindings || defaultSettings.keyBindings,
       blacklist: result.blacklist || defaultSettings.blacklist,
+      theme: result.theme || defaultSettings.theme,
       // Legacy support
       videoSpeedSettings: result.videoSpeedSettings || {},
       videoSpeedEnabled: result.videoSpeedEnabled !== false,
@@ -915,6 +919,7 @@ async function updateSpeedSettings(settings) {
     if (settings.displayKeyCode !== undefined) updates.displayKeyCode = settings.displayKeyCode;
     if (settings.keyBindings !== undefined) updates.keyBindings = settings.keyBindings;
     if (settings.blacklist !== undefined) updates.blacklist = settings.blacklist;
+    if (settings.theme !== undefined) updates.theme = settings.theme;
     
     // Legacy support
     if (settings.videoSpeedSettings !== undefined) updates.videoSpeedSettings = settings.videoSpeedSettings;

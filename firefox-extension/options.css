@@ -51,6 +51,22 @@
   --animation-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+/* Dark theme variables */
+[data-theme="dark"] {
+  --bg-primary: #0f1220;
+  --bg-secondary: #12162a;
+  --bg-tertiary: #1b2140;
+  --text-primary: #e6e9f5;
+  --text-secondary: #b3b9d8;
+  --text-muted: #7f86ad;
+  --border-color: #2a325f;
+  --bg-glass: rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -65,6 +81,10 @@ body {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+[data-theme="dark"] body {
+  background: linear-gradient(135deg, #0b0e1a 0%, #131a33 100%);
 }
 
 /* Loading Animation */
@@ -88,7 +108,7 @@ body {
 
 /* Enhanced Header */
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4854d6 0%, #6b3fa6 100%);
   color: var(--text-white);
   padding: var(--spacing-2xl) var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -342,7 +362,7 @@ body {
   margin-bottom: var(--spacing-2xl);
   padding-bottom: var(--spacing-xl);
   border-bottom: 3px solid transparent;
-  background: linear-gradient(white, white) padding-box,
+  background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
               linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
   border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1;
   position: relative;
@@ -652,6 +672,42 @@ input:checked + .toggle-slider:before {
   background: var(--bg-primary);
 }
 
+/* Force dark-friendly typography for shortcut controls */
+.shortcut-item,
+.shortcut-item * {
+  color: var(--text-primary);
+}
+
+/* Select + options in dark mode */
+.shortcut-action {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+.shortcut-action option {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+/* Inputs */
+.shortcut-key,
+.shortcut-value {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+.shortcut-key::placeholder,
+.shortcut-value::placeholder { color: var(--text-muted); }
+
+/* Ensure section headers adopt theme background strongly */
+.section-header {
+  background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+              linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box !important;
+}
+
+[data-theme="dark"] .section-header {
+  background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+              linear-gradient(135deg, #4854d6 0%, #6b3fa6 100%) border-box !important;
+}
+
 .shortcut-action,
 .shortcut-key,
 .shortcut-value {
@@ -660,6 +716,7 @@ input:checked + .toggle-slider:before {
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-sm);
   background: var(--bg-primary);
+  color: var(--text-primary);
   transition: all var(--animation-duration) var(--animation-ease);
   font-weight: 500;
 }
@@ -679,6 +736,18 @@ input:checked + .toggle-slider:before {
   min-width: 60px;
   text-align: center;
   font-weight: 600;
+}
+
+/* Better placeholders in dark mode */
+.shortcut-value::placeholder,
+.shortcut-key::placeholder {
+  color: var(--text-muted);
+}
+
+/* Ensure section headers honor dark theme */
+[data-theme="dark"] .section-header {
+  background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+              linear-gradient(135deg, #4854d6 0%, #6b3fa6 100%) border-box;
 }
 
 .shortcut-action:focus,

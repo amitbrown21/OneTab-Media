@@ -13,10 +13,99 @@ const browserAPI = (function() {
   return null;
 })();
 
+// Cross-browser storage helpers (Promise-based)
+async function syncGet(keys) {
+  try {
+    if (typeof browser !== 'undefined' && browser.storage?.sync?.get) {
+      return await browser.storage.sync.get(keys);
+    }
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync?.get) {
+      return await new Promise((resolve, reject) => {
+        chrome.storage.sync.get(keys, (data) => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else resolve(data || {});
+        });
+      });
+    }
+  } catch (_) {}
+  return {};
+}
+
+async function syncSet(obj) {
+  try {
+    if (typeof browser !== 'undefined' && browser.storage?.sync?.set) {
+      return await browser.storage.sync.set(obj);
+    }
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync?.set) {
+      return await new Promise((resolve, reject) => {
+        chrome.storage.sync.set(obj, () => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else resolve();
+        });
+      });
+    }
+  } catch (_) {}
+}
+
+async function localGet(keys) {
+  try {
+    if (typeof browser !== 'undefined' && browser.storage?.local?.get) {
+      return await browser.storage.local.get(keys);
+    }
+    if (typeof chrome !== 'undefined' && chrome.storage?.local?.get) {
+      return await new Promise((resolve, reject) => {
+        chrome.storage.local.get(keys, (data) => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else resolve(data || {});
+        });
+      });
+    }
+  } catch (_) {}
+  return {};
+}
+
+async function syncRemove(keys) {
+  try {
+    if (typeof browser !== 'undefined' && browser.storage?.sync?.remove) {
+      return await browser.storage.sync.remove(keys);
+    }
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync?.remove) {
+      return await new Promise((resolve, reject) => {
+        chrome.storage.sync.remove(keys, () => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else resolve();
+        });
+      });
+    }
+  } catch (_) {}
+}
+
+async function localRemove(keys) {
+  try {
+    if (typeof browser !== 'undefined' && browser.storage?.local?.remove) {
+      return await browser.storage.local.remove(keys);
+    }
+    if (typeof chrome !== 'undefined' && chrome.storage?.local?.remove) {
+      return await new Promise((resolve, reject) => {
+        chrome.storage.local.remove(keys, () => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else resolve();
+        });
+      });
+    }
+  } catch (_) {}
+}
+
+// Lightweight logger to help diagnose options init issues
+function logOptions(...args) {
+  try { console.log('[UME Options]', ...args); } catch (_) {}
+}
+
 // Default settings - Enhanced to match original videospeed extension exactly  
 const defaultSettings = {
   extensionEnabled: true,
   enabled: true, // Legacy compatibility
+  theme: 'light', // 'light' | 'dark'
   showController: true,
   startHidden: false,
   rememberSpeed: true, // Enable by default like original
@@ -91,20 +180,28 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initializeOptionsPage() {
-  // First, ensure defaults are set if this is a fresh install
-  await ensureDefaultsSet();
-  
-  // Migrate from local storage if needed
+  logOptions('init: start');
+  // First migrate from local storage if needed (so we don't overwrite with defaults)
   await migrateFromLocalStorage();
+  logOptions('init: after migrate');
+
+  // Then ensure defaults exist only for missing keys
+  await ensureDefaultsSet();
+  logOptions('init: after ensureDefaultsSet');
   
   // Load current settings
   await loadSettings();
+  logOptions('init: after loadSettings');
   
   // Set up UI event listeners
   setupEventListeners();
   
   // Set up navigation
   setupNavigation();
+
+  // Initialize theme toggle state and listeners
+  initializeThemeControls();
+  logOptions('init: theme controls ready');
 }
 
 /**
@@ -113,23 +210,80 @@ async function initializeOptionsPage() {
 async function migrateFromLocalStorage() {
   try {
     // Check if we already have sync settings
-    const syncData = await browserAPI.storage.sync.get(Object.keys(defaultSettings)) || {};
+    const syncData = await syncGet(Object.keys(defaultSettings)) || {};
     const hasSyncData = Object.keys(syncData).length > 0;
+    logOptions('migrate: hasSyncData', hasSyncData);
     
     if (!hasSyncData) {
       // Check if we have local storage data to migrate
-      const localData = await browserAPI.storage.local.get(Object.keys(defaultSettings)) || {};
+      const localData = await localGet(Object.keys(defaultSettings)) || {};
       const hasLocalData = Object.keys(localData).length > 0;
+      logOptions('migrate: hasLocalData', hasLocalData);
       
       if (hasLocalData) {
-        console.log('OneTab Media: Migrating settings from local to sync storage');
-        await browserAPI.storage.sync.set(localData);
+        logOptions('migrate: moving local->sync');
+        await syncSet(localData);
         showStatus('Settings migrated to sync storage for cross-device compatibility', 'success', 4000);
       }
     }
   } catch (error) {
-    console.warn('OneTab Media: Failed to migrate settings:', error);
+    console.warn('[UME Options] migrate error:', error);
   }
+}
+
+function initializeThemeControls() {
+  const themeToggle = document.getElementById('themeToggleOptions');
+  const themeLabel = document.getElementById('themeLabelOptions');
+  if (!themeToggle || !themeLabel) return;
+  (async () => {
+    try {
+      let result;
+      if (typeof browser !== 'undefined' && browser.storage && browser.storage.sync && typeof browser.storage.sync.get === 'function') {
+        result = await browser.storage.sync.get(['theme']);
+      } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync && typeof chrome.storage.sync.get === 'function') {
+        result = await new Promise((resolve, reject) => {
+          chrome.storage.sync.get(['theme'], (data) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(data);
+            }
+          });
+        });
+      }
+      const theme = (result && result.theme) || 'light';
+      applyTheme(theme, themeToggle, themeLabel);
+    } catch (e) {
+      applyTheme('light', themeToggle, themeLabel);
+    }
+  })();
+  themeToggle.addEventListener('change', async () => {
+    const theme = themeToggle.checked ? 'dark' : 'light';
+    applyTheme(theme, themeToggle, themeLabel);
+    try {
+      if (typeof browser !== 'undefined' && browser.storage && browser.storage.sync && typeof browser.storage.sync.set === 'function') {
+        await browser.storage.sync.set({ theme });
+      } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync && typeof chrome.storage.sync.set === 'function') {
+        await new Promise((resolve, reject) => {
+          chrome.storage.sync.set({ theme }, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
+      logOptions('theme saved', theme);
+    } catch (e) {}
+  });
+}
+
+function applyTheme(theme, toggleEl, labelEl) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const isDark = theme === 'dark';
+  if (toggleEl) toggleEl.checked = isDark;
+  if (labelEl) labelEl.textContent = isDark ? 'Dark Mode' : 'Light Mode';
 }
 
 /**
@@ -137,15 +291,18 @@ async function migrateFromLocalStorage() {
  */
 async function ensureDefaultsSet() {
   try {
-    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings)) || {};
+    const keys = [...Object.keys(defaultSettings), 'settingsInitialized'];
+    const result = await syncGet(keys) || {};
+    logOptions('ensureDefaultsSet: current keys', Object.keys(result));
     
     // Check if this is a fresh install (no settings exist)
     const isFreshInstall = Object.keys(result).length === 0;
     
-    if (isFreshInstall) {
-      console.log('OneTab Media: Setting up defaults for fresh install');
-      await browserAPI.storage.sync.set(defaultSettings);
-      showStatus('Welcome to UME - Ultimate Media Extention! Default settings have been applied and will sync across your devices.', 'success', 4000);
+    const alreadyInitialized = result.settingsInitialized === true;
+
+    if (isFreshInstall && !alreadyInitialized) {
+      logOptions('ensureDefaultsSet: fresh install, writing defaults');
+      await syncSet({ ...defaultSettings, settingsInitialized: true });
     } else {
       // Ensure any missing settings are set to defaults
       const updates = {};
@@ -154,10 +311,11 @@ async function ensureDefaultsSet() {
           updates[key] = defaultValue;
         }
       }
+      if (!alreadyInitialized) updates.settingsInitialized = true;
       
       if (Object.keys(updates).length > 0) {
-        console.log('OneTab Media: Adding missing default settings:', updates);
-        await browserAPI.storage.sync.set(updates);
+        logOptions('ensureDefaultsSet: setting missing defaults', updates);
+        await syncSet(updates);
       }
     }
     
@@ -165,7 +323,7 @@ async function ensureDefaultsSet() {
     await cleanupDeprecatedSettings();
     
   } catch (error) {
-    console.error('Failed to ensure defaults:', error);
+    console.error('[UME Options] ensureDefaultsSet error:', error);
     showStatus('Error setting up default settings', 'error');
   }
 }
@@ -181,8 +339,8 @@ async function cleanupDeprecatedSettings() {
       'advanceKeyCode', 'fastKeyCode', 'videoSpeedSettings', 'lastSpeed'
     ];
     
-    await browserAPI.storage.sync.remove(deprecatedKeys);
-    await browserAPI.storage.local.remove(deprecatedKeys);
+    await syncRemove(deprecatedKeys);
+    await localRemove(deprecatedKeys);
   } catch (error) {
     console.warn('Failed to cleanup deprecated settings:', error);
   }
@@ -291,7 +449,8 @@ function setupEventListeners() {
 
 async function loadSettings() {
   try {
-    const result = await browserAPI.storage.sync.get(Object.keys(defaultSettings)) || {};
+    const result = await syncGet(Object.keys(defaultSettings)) || {};
+    logOptions('loadSettings: loaded', result ? Object.keys(result).length : 0);
     currentSettings = { ...defaultSettings, ...result };
     
     // Load general settings
@@ -358,7 +517,7 @@ async function loadSettings() {
     populateKeyBindings();
     
   } catch (error) {
-    console.error('Failed to load settings:', error);
+    console.error('[UME Options] loadSettings error:', error);
     showStatus('Failed to load settings', 'error');
   }
 }
@@ -469,6 +628,12 @@ async function saveSettings() {
     const blacklistEl = document.getElementById('blacklist');
     if (blacklistEl) {
       settings.blacklist = blacklistEl.value.replace(/^[\r\t\f\v ]+|[\r\t\f\v ]+$/gm, '');
+    }
+
+    // Theme
+    const themeToggle = document.getElementById('themeToggleOptions');
+    if (themeToggle) {
+      settings.theme = themeToggle.checked ? 'dark' : 'light';
     }
     
     // Add volume booster settings if elements exist
