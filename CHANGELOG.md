@@ -1,5 +1,20 @@
 # UME - Ultimate Media Extension - Changelog
 
+## Version 3.2 (August 2025)
+
+### ✨ UI/UX
+- New Options v3 design using `options.v3.css` (Chrome/Firefox)
+- Themeable light/dark with cross-device sync and toggles in Popup/Options
+- Dark-mode parity for Keyboard Shortcuts, inputs, sliders, toggles
+- Subtle animations (card lift, button sheen, toggle sweep) and refined header visuals
+
+### ⚙️ Settings & Reliability
+- Robust initialization: migrate local→sync first; fill only missing keys
+- Prevent defaults from reapplying on every open via `settingsInitialized`
+
+### 📦 Packaging
+- Bump manifests to version 3.2
+
 ## Version 3.0 (December 2024)
 
 ### 🚨 CRITICAL BUG FIX: Simultaneous Playback Prevention
