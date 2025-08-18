@@ -14,18 +14,165 @@
   window.mediaTabManagerInjected = true;
   
   // Browser compatibility layer
-  const browserAPI = (function() {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      return chrome;
-    } else if (typeof browser !== 'undefined' && browser.runtime) {
-      return browser;
+const browserAPI = (function() {
+  if (typeof chrome !== 'undefined' && chrome.runtime) {
+    return chrome;
+  } else if (typeof browser !== 'undefined' && browser.runtime) {
+    return browser;
+  }
+  return null;
+})();
+
+/**
+ * Enhanced storage manager with cross-browser sync storage for content scripts
+ * Both Chrome and Firefox: Uses sync storage for cross-device sync
+ * Fallback: Uses local storage if sync fails
+ */
+const ContentStorageManager = {
+  /**
+   * Determine if we're running in Firefox
+   */
+  isFirefox() {
+    return typeof browser !== 'undefined' && browser.runtime;
+  },
+
+  /**
+   * Get settings with sync storage and local fallback
+   */
+  async get(keys) {
+    try {
+      // Try sync storage first (both Chrome and Firefox)
+      let result = await browserAPI.storage.sync.get(keys);
+      
+      if (this.isFirefox()) {
+        console.log('OneTab Media Content Firefox: Settings loaded from sync storage');
+      } else {
+        console.log('OneTab Media Content Chrome: Settings loaded from sync storage');
+      }
+      
+      // If sync storage is empty, try local storage fallback
+      if (!result || Object.keys(result).length === 0) {
+        console.log('OneTab Media Content: Sync storage empty, trying local storage fallback');
+        result = await browserAPI.storage.local.get(keys);
+      }
+      
+      return result || {};
+    } catch (error) {
+      console.warn('OneTab Media Content: Sync storage failed, trying local fallback:', error);
+      try {
+        return await browserAPI.storage.local.get(keys) || {};
+      } catch (localError) {
+        console.error('OneTab Media Content: All storage methods failed:', localError);
+        return {};
+      }
     }
-    return null;
-  })();
+  },
+
+  /**
+   * Set settings to sync storage with local backup
+   */
+  async set(items) {
+    try {
+      // Save to sync storage first (primary for both browsers)
+      await browserAPI.storage.sync.set(items);
+      
+      if (this.isFirefox()) {
+        console.log('OneTab Media Content Firefox: Settings saved to sync storage');
+      } else {
+        console.log('OneTab Media Content Chrome: Settings saved to sync storage');
+      }
+      
+      // Also save to local storage as backup for both browsers
+      try {
+        await browserAPI.storage.local.set(items);
+        console.log('OneTab Media Content: Settings backed up to local storage');
+      } catch (localError) {
+        console.warn('OneTab Media Content: Local storage backup failed:', localError);
+      }
+      
+      return true;
+    } catch (error) {
+      console.warn('OneTab Media Content: Sync storage failed, using local storage:', error);
+      try {
+        await browserAPI.storage.local.set(items);
+        console.log('OneTab Media Content: Settings saved to local storage only');
+        return true;
+      } catch (localError) {
+        console.error('OneTab Media Content: All storage methods failed:', localError);
+        return false;
+      }
+    }
+  }
+};
   
   // Track media elements and their states
   const trackedElements = new WeakMap();
   const activeMediaElements = new Set();
+  
+  // Enhanced logging for content script
+  const DEBUG_MODE = true;
+  let contentScriptStartTime = Date.now();
+  let contentLogBuffer = [];
+  const MAX_CONTENT_LOG_BUFFER = 500;
+  
+  // Statistics tracking for content script
+  let contentStats = {
+    videosDetected: 0,
+    audiosDetected: 0,
+    speedChanges: 0,
+    livestreamsDetected: 0,
+    errors: 0,
+    lastActivity: Date.now()
+  };
+
+  /**
+   * Enhanced logging for content script
+   */
+  function contentDebugLog(category, message, data = null) {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      category,
+      message,
+      data: data ? JSON.stringify(data) : null,
+      uptime: Date.now() - contentScriptStartTime,
+      url: window.location.href
+    };
+    
+    // Add to buffer
+    contentLogBuffer.push(logEntry);
+    if (contentLogBuffer.length > MAX_CONTENT_LOG_BUFFER) {
+      contentLogBuffer.shift();
+    }
+    
+    // Console output
+    const logLine = `[UME-CONTENT-${category}] ${timestamp} (+${logEntry.uptime}ms) ${message}`;
+    if (data) {
+      console.log(logLine, data);
+    } else {
+      console.log(logLine);
+    }
+    
+    // Update last activity
+    contentStats.lastActivity = Date.now();
+  }
+
+  /**
+   * Get content script diagnostic information
+   */
+  function getContentDiagnosticInfo() {
+    return {
+      uptime: Date.now() - contentScriptStartTime,
+      stats: contentStats,
+      activeMediaCount: activeMediaElements.size,
+      trackedElementsCount: trackedElements ? 'WeakMap (count unknown)' : 0,
+      url: window.location.href,
+      recentLogs: contentLogBuffer.slice(-25), // Last 25 log entries
+      videoElements: document.querySelectorAll('video').length,
+      audioElements: document.querySelectorAll('audio').length,
+      livestreamElements: Array.from(document.querySelectorAll('video')).filter(v => v.duration === Infinity).length
+    };
+  }
   
   // Enhanced settings to match original videospeed extension
   let speedSettings = {
@@ -222,18 +369,37 @@
     }
 
     setupEventListeners() {
-      // Handle play events
+      // Handle play events - more conservative for Firefox/livestreams
       this.handlePlay = () => {
-        const src = this.video.src || this.video.currentSrc;
-        let storedSpeed = speedSettings.speeds[src] || speedSettings.lastSpeed;
-        this.setSpeed(storedSpeed);
+        // Delay speed restoration to avoid interfering with initial loading
+        setTimeout(() => {
+          const src = this.video.src || this.video.currentSrc;
+          let storedSpeed = speedSettings.speeds[src] || speedSettings.lastSpeed;
+          
+          // Only restore speed if it's different from default and video is actually playing
+          if (storedSpeed !== 1.0 && !this.video.paused && this.video.readyState >= 2) {
+            this.setSpeed(storedSpeed);
+          }
+        }, 500); // Give video time to start properly
       };
 
-      // Handle seeked events
+      // Handle seeked events - be less aggressive for livestreams
       this.handleSeek = () => {
-        const src = this.video.src || this.video.currentSrc;
-        let storedSpeed = speedSettings.speeds[src] || speedSettings.lastSpeed;
-        this.setSpeed(storedSpeed);
+        // Don't restore speed on seek for livestreams (duration often Infinity)
+        if (this.video.duration === Infinity || isNaN(this.video.duration)) {
+          return; // Skip for livestreams
+        }
+        
+        // Delay to avoid interfering with seek operation
+        setTimeout(() => {
+          const src = this.video.src || this.video.currentSrc;
+          let storedSpeed = speedSettings.speeds[src] || speedSettings.lastSpeed;
+          
+          // Only restore if video is playing and seek has completed
+          if (storedSpeed !== 1.0 && !this.video.paused && !this.video.seeking) {
+            this.setSpeed(storedSpeed);
+          }
+        }, 300);
       };
 
       this.video.addEventListener('play', this.handlePlay);
@@ -331,6 +497,27 @@
 
       speed = Math.max(0.1, Math.min(5.0, speed));
       
+      // Skip speed changes for livestreams to avoid buffering issues
+      if (this.video.duration === Infinity || isNaN(this.video.duration)) {
+        console.log('OneTab Media: VideoController skipping speed change for livestream');
+        // Still update the display for user feedback
+        if (this.speedDisplay) {
+          this.speedDisplay.textContent = '1.00x (Live)';
+        }
+        return;
+      }
+      
+      // Don't change speed if video is not in a stable state
+      if (this.video.readyState < 1 || this.video.seeking) {
+        console.log('OneTab Media: VideoController video not ready, queuing speed change');
+        setTimeout(() => {
+          if (this.video.readyState >= 1 && !this.video.seeking) {
+            this.setSpeed(speed);
+          }
+        }, 500);
+        return;
+      }
+      
       try {
         // Update video playback rate
         this.video.playbackRate = speed;
@@ -343,7 +530,7 @@
           console.error('OneTab Media: speedDisplay element not found for update');
         }
         
-        // Store speed
+        // Store speed only after successful application
         const src = this.video.src || this.video.currentSrc;
         if (src) {
           speedSettings.speeds[src] = speed;
@@ -363,6 +550,10 @@
         console.log('OneTab Media: VideoController speed set to', speed);
       } catch (error) {
         console.error('OneTab Media: Error setting speed in VideoController:', error);
+        // Reset display on error
+        if (this.speedDisplay) {
+          this.speedDisplay.textContent = this.video.playbackRate.toFixed(2) + 'x';
+        }
       }
     }
 
@@ -403,7 +594,11 @@
   // Debounce timer for media state changes
   let debounceTimer = null;
   
-  console.log('OneTab Media: Enhanced content script loaded on', window.location.href);
+  contentDebugLog('INIT', 'Enhanced content script loaded', {
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    readyState: document.readyState
+  });
 
   /**
    * Show temporary notification to user
@@ -469,7 +664,7 @@
    */
   async function loadSpeedSettings() {
     try {
-      const result = await browserAPI.storage.sync.get([
+      const result = await ContentStorageManager.get([
         'enabled',
         'showController',
         'startHidden',
@@ -523,7 +718,7 @@
    */
   async function saveSpeedSettings() {
     try {
-      await browserAPI.storage.sync.set({
+      const success = await ContentStorageManager.set({
         enabled: speedSettings.enabled,
         showController: speedSettings.showController,
         startHidden: speedSettings.startHidden,
@@ -538,7 +733,12 @@
         videoSpeedSettings: speedSettings,
         lastSpeed: speedSettings.lastSpeed
       });
-      console.log('OneTab Media: Settings saved successfully');
+      
+      if (success) {
+        console.log('OneTab Media: Settings saved successfully with enhanced persistence');
+      } else {
+        console.warn('OneTab Media: Settings saved with limited persistence');
+      }
     } catch (error) {
       console.warn('OneTab Media: Failed to save speed settings:', error);
     }
@@ -765,7 +965,14 @@
       
       switch (action) {
         case 'faster':
-          const fasterSpeed = Math.min((element.playbackRate < 0.1 ? 0.0 : element.playbackRate) + value, 16);
+          // Skip speed changes for livestreams
+          if (element.duration === Infinity || isNaN(element.duration)) {
+            console.log('OneTab Media: Skipping speed increase for livestream');
+            showTemporaryNotification('Speed changes not available for livestreams');
+            break;
+          }
+          
+          const fasterSpeed = Math.min((element.playbackRate < 0.1 ? 0.0 : element.playbackRate) + value, 5.0);
           // Use VideoController's setSpeed if available, otherwise use global setSpeed
           if (element.vsc && typeof element.vsc.setSpeed === 'function') {
             element.vsc.setSpeed(fasterSpeed);
@@ -775,7 +982,14 @@
           break;
           
         case 'slower':
-          const slowerSpeed = Math.max(element.playbackRate - value, 0.07);
+          // Skip speed changes for livestreams
+          if (element.duration === Infinity || isNaN(element.duration)) {
+            console.log('OneTab Media: Skipping speed decrease for livestream');
+            showTemporaryNotification('Speed changes not available for livestreams');
+            break;
+          }
+          
+          const slowerSpeed = Math.max(element.playbackRate - value, 0.1);
           // Use VideoController's setSpeed if available, otherwise use global setSpeed
           if (element.vsc && typeof element.vsc.setSpeed === 'function') {
             element.vsc.setSpeed(slowerSpeed);
@@ -785,6 +999,13 @@
           break;
           
         case 'reset':
+          // Skip speed changes for livestreams
+          if (element.duration === Infinity || isNaN(element.duration)) {
+            console.log('OneTab Media: Skipping speed reset for livestream');
+            showTemporaryNotification('Speed changes not available for livestreams');
+            break;
+          }
+          
           const resetSpeed = element.playbackRate === 1.0 ? speedSettings.lastSpeed : 1.0;
           // Use VideoController's setSpeed if available, otherwise use global setSpeed
           if (element.vsc && typeof element.vsc.setSpeed === 'function') {
@@ -795,6 +1016,13 @@
           break;
 
         case 'fast':
+          // Skip speed changes for livestreams
+          if (element.duration === Infinity || isNaN(element.duration)) {
+            console.log('OneTab Media: Skipping fast speed for livestream');
+            showTemporaryNotification('Speed changes not available for livestreams');
+            break;
+          }
+          
           // Use VideoController's setSpeed if available, otherwise use global setSpeed
           if (element.vsc && typeof element.vsc.setSpeed === 'function') {
             element.vsc.setSpeed(value);
@@ -888,28 +1116,72 @@
 
   /**
    * Set playback speed for a media element
+   * Firefox-optimized version with better error handling
    */
   function setSpeed(element, speed) {
     const speedValue = Number(speed.toFixed(2));
-    element.playbackRate = speedValue;
     
-    // Store speed settings
-    if (element.src || element.currentSrc) {
-      speedSettings.speeds[element.src || element.currentSrc] = speedValue;
+    // Validate speed value
+    if (speedValue < 0.1 || speedValue > 5.0 || isNaN(speedValue)) {
+      console.warn('OneTab Media: Invalid speed value:', speedValue);
+      return;
     }
-    speedSettings.lastSpeed = speedValue;
     
-    // Save to storage
-    saveSpeedSettings();
+    // Skip speed changes for livestreams to avoid buffering issues
+    if (element.duration === Infinity || isNaN(element.duration)) {
+      console.log('OneTab Media: Skipping speed change for livestream');
+      return;
+    }
     
-    // Notify background script about speed change
-    sendMessage({
-      type: 'SPEED_CHANGED',
-      speed: speedValue,
-      src: element.src || element.currentSrc
-    });
+    // Don't change speed if video is not in a stable state
+    if (element.readyState < 1 || element.seeking) {
+      console.log('OneTab Media: Video not ready for speed change, queuing for later');
+      // Queue the speed change for when video is ready
+      setTimeout(() => {
+        if (element.readyState >= 1 && !element.seeking) {
+          setSpeed(element, speed);
+        }
+      }, 500);
+      return;
+    }
     
-    console.log('OneTab Media: Speed changed to', speedValue);
+    try {
+      element.playbackRate = speedValue;
+      contentStats.speedChanges++;
+      
+      // Store speed settings only after successful application
+      if (element.src || element.currentSrc) {
+        speedSettings.speeds[element.src || element.currentSrc] = speedValue;
+      }
+      speedSettings.lastSpeed = speedValue;
+      
+      // Save to storage
+      saveSpeedSettings();
+      
+      // Notify background script about speed change
+      sendMessage({
+        type: 'SPEED_CHANGED',
+        speed: speedValue,
+        src: element.src || element.currentSrc
+      });
+      
+      contentDebugLog('SPEED_CHANGE', `Speed changed to ${speedValue}`, {
+        element: element.tagName,
+        src: element.src || element.currentSrc,
+        previousSpeed: element.playbackRate,
+        newSpeed: speedValue,
+        isLivestream: element.duration === Infinity,
+        readyState: element.readyState
+      });
+    } catch (error) {
+      contentStats.errors++;
+      contentDebugLog('SPEED_CHANGE', 'Failed to set speed', {
+        error: error.message,
+        targetSpeed: speedValue,
+        element: element.tagName,
+        readyState: element.readyState
+      });
+    }
   }
   
   /**
@@ -1003,22 +1275,37 @@
     const videoElements = document.querySelectorAll('video');
     const audioElements = document.querySelectorAll('audio');
     
-    console.log('OneTab Media: Detecting existing media elements');
-    console.log('OneTab Media: Found', videoElements.length, 'video elements');
-    console.log('OneTab Media: Found', audioElements.length, 'audio elements');
-    console.log('OneTab Media: URL:', window.location.href);
+    contentStats.videosDetected += videoElements.length;
+    contentStats.audiosDetected += audioElements.length;
+    
+    // Count livestreams
+    const livestreams = Array.from(videoElements).filter(v => v.duration === Infinity || isNaN(v.duration));
+    contentStats.livestreamsDetected += livestreams.length;
+    
+    contentDebugLog('MEDIA_DETECT', 'Detecting existing media elements', {
+      videoCount: videoElements.length,
+      audioCount: audioElements.length,
+      livestreamCount: livestreams.length,
+      totalMediaElements: videoElements.length + audioElements.length
+    });
     
     // Log details about video elements
     videoElements.forEach((video, index) => {
-      console.log(`OneTab Media: Video ${index}:`, {
+      const videoInfo = {
+        index: index,
         src: video.src,
         currentSrc: video.currentSrc,
         paused: video.paused,
         readyState: video.readyState,
+        duration: video.duration,
+        isLivestream: video.duration === Infinity || isNaN(video.duration),
         tagName: video.tagName,
         className: video.className,
-        id: video.id
-      });
+        id: video.id,
+        playbackRate: video.playbackRate
+      };
+      
+      contentDebugLog('MEDIA_DETECT', `Video element ${index} details`, videoInfo);
     });
     
     [...videoElements, ...audioElements].forEach(element => {
@@ -1106,7 +1393,17 @@
     const elementInfo = trackedElements.get(element);
     if (!elementInfo) return;
     
+    // Prevent duplicate events for the same element
+    if (elementInfo.isPlaying) {
+      contentDebugLog('MEDIA_PLAY', 'Ignoring duplicate play event', {
+        src: element.src || element.currentSrc,
+        currentTime: element.currentTime
+      });
+      return;
+    }
+    
     elementInfo.isPlaying = true;
+    elementInfo.lastPlayEvent = Date.now();
     activeMediaElements.add(element);
     
     // Restore speed for this media source if available
@@ -1123,20 +1420,39 @@
       playbackRate: element.playbackRate // Add current speed
     };
     
-    console.log('OneTab Media: Media started playing', mediaInfo);
-    console.log('OneTab Media: activeMediaElements.size:', activeMediaElements.size);
-    
-    // Notify background script
-    sendMessage({
-      type: 'MEDIA_STARTED',
-      mediaInfo: mediaInfo
+    contentDebugLog('MEDIA_PLAY', 'Media started playing', {
+      mediaInfo: mediaInfo,
+      activeMediaCount: activeMediaElements.size
     });
+    
+    // Debounce media start events to prevent spam
+    clearTimeout(element._mediaStartTimeout);
+    element._mediaStartTimeout = setTimeout(() => {
+      // Notify background script
+      sendMessage({
+        type: 'MEDIA_STARTED',
+        mediaInfo: mediaInfo
+      });
+    }, 100); // 100ms debounce
   }
 
   /**
    * Restore speed for a media element based on stored settings
+   * Firefox-optimized version with livestream detection
    */
   function restoreSpeed(element) {
+    // Skip speed restoration for livestreams to avoid buffering issues
+    if (element.duration === Infinity || isNaN(element.duration)) {
+      console.log('OneTab Media: Skipping speed restoration for livestream');
+      return;
+    }
+    
+    // Don't restore speed if video is not in a stable state
+    if (element.readyState < 2 || element.seeking || element.paused) {
+      console.log('OneTab Media: Video not ready for speed restoration');
+      return;
+    }
+    
     const src = element.src || element.currentSrc;
     let targetSpeed = speedSettings.lastSpeed;
     
@@ -1146,14 +1462,21 @@
     }
     
     // Only set speed if it's different from current and not default
-    if (targetSpeed !== 1.0 && Math.abs(element.playbackRate - targetSpeed) > 0.01) {
-      // Use VideoController's setSpeed if available, otherwise set directly
-      if (element.vsc && typeof element.vsc.setSpeed === 'function') {
-        element.vsc.setSpeed(targetSpeed);
-      } else {
-        element.playbackRate = targetSpeed;
-      }
-      console.log('OneTab Media: Restored speed to', targetSpeed, 'for', src);
+    // Use a larger threshold to avoid unnecessary adjustments
+    if (targetSpeed !== 1.0 && Math.abs(element.playbackRate - targetSpeed) > 0.05) {
+      // Add a small delay to ensure video is fully loaded
+      setTimeout(() => {
+        // Re-check video state before applying speed
+        if (element.readyState >= 2 && !element.seeking && !element.paused) {
+          // Use VideoController's setSpeed if available, otherwise set directly
+          if (element.vsc && typeof element.vsc.setSpeed === 'function') {
+            element.vsc.setSpeed(targetSpeed);
+          } else {
+            element.playbackRate = targetSpeed;
+          }
+          console.log('OneTab Media: Restored speed to', targetSpeed, 'for', src);
+        }
+      }, 200);
     }
   }
   
@@ -1199,6 +1522,8 @@
   
   /**
    * Detect Web Audio API usage (for web-based music players)
+   * CONSERVATIVE MODE: Only detect when there are NO HTML media elements
+   * to avoid false positives from background audio, ads, UI sounds
    */
   function detectWebAudioUsage() {
     if (!window.AudioContext && !window.webkitAudioContext) {
@@ -1210,7 +1535,6 @@
     
     if (OriginalAudioContext && !OriginalAudioContext._mediaTabManagerPatched) {
       const originalCreateGain = OriginalAudioContext.prototype.createGain;
-      const originalCreateBufferSource = OriginalAudioContext.prototype.createBufferSource;
       
       // Patch createGain to detect volume changes
       OriginalAudioContext.prototype.createGain = function() {
@@ -1219,17 +1543,49 @@
         // Monitor gain changes as a proxy for playback state
         const originalConnect = gainNode.connect;
         gainNode.connect = function(destination) {
-          // If connecting to speakers/destination, likely starting playback
+          // Only report Web Audio as media if:
+          // 1. Connecting to speakers/destination
+          // 2. NO HTML media elements exist (to avoid conflicts)
+          // 3. This looks like a legitimate music player (not background audio)
           if (destination === this.context.destination) {
             setTimeout(() => {
-              sendMessage({
-                type: 'MEDIA_STARTED',
-                mediaInfo: {
-                  type: 'webaudio',
-                  src: 'Web Audio API',
-                  title: document.title
+              // Conservative check: only report if no HTML media elements
+              const hasHtmlMedia = document.querySelectorAll('video, audio').length > 0;
+              
+              if (!hasHtmlMedia) {
+                // Additional check: only report for likely music player sites
+                const hostname = window.location.hostname.toLowerCase();
+                const isMusicSite = [
+                  'spotify.com', 'soundcloud.com', 'bandcamp.com', 'music.apple.com',
+                  'deezer.com', 'tidal.com', 'pandora.com', 'music.youtube.com'
+                ].some(site => hostname.includes(site));
+                
+                if (isMusicSite) {
+                  contentDebugLog('WEB_AUDIO', 'Detected legitimate Web Audio API music player', {
+                    hostname: hostname,
+                    hasHtmlMedia: hasHtmlMedia
+                  });
+                  
+                  sendMessage({
+                    type: 'MEDIA_STARTED',
+                    mediaInfo: {
+                      type: 'webaudio',
+                      src: 'Web Audio API',
+                      title: document.title
+                    }
+                  });
+                } else {
+                  contentDebugLog('WEB_AUDIO', 'Ignoring Web Audio API (not a music site)', {
+                    hostname: hostname,
+                    hasHtmlMedia: hasHtmlMedia
+                  });
                 }
-              });
+              } else {
+                contentDebugLog('WEB_AUDIO', 'Ignoring Web Audio API (HTML media elements present)', {
+                  videoCount: document.querySelectorAll('video').length,
+                  audioCount: document.querySelectorAll('audio').length
+                });
+              }
             }, 100);
           }
           return originalConnect.apply(this, arguments);
@@ -1239,6 +1595,7 @@
       };
       
       OriginalAudioContext._mediaTabManagerPatched = true;
+      contentDebugLog('WEB_AUDIO', 'Web Audio API detection enabled (conservative mode)');
     }
   }
   
@@ -1378,14 +1735,42 @@
           const mediaElements = document.querySelectorAll('video, audio');
           const hasMedia = mediaElements.length > 0;
           const mediaTypes = Array.from(mediaElements).map(el => el.tagName.toLowerCase());
+          const videoElements = document.querySelectorAll('video');
+          const audioElements = document.querySelectorAll('audio');
+          const livestreamCount = Array.from(videoElements).filter(v => v.duration === Infinity || isNaN(v.duration)).length;
           
-          sendResponse({
+          // Check for actively playing media
+          const playingVideos = Array.from(videoElements).filter(v => !v.paused);
+          const playingAudios = Array.from(audioElements).filter(a => !a.paused);
+          const hasPlayingMedia = playingVideos.length > 0 || playingAudios.length > 0;
+          
+          const response = {
             hasMedia: hasMedia,
             mediaCount: mediaElements.length,
             mediaTypes: [...new Set(mediaTypes)], // Remove duplicates
-            videoCount: document.querySelectorAll('video').length,
-            audioCount: document.querySelectorAll('audio').length
+            videoCount: videoElements.length,
+            audioCount: audioElements.length,
+            livestreamCount: livestreamCount,
+            activeMediaCount: activeMediaElements.size,
+            playingVideoCount: playingVideos.length,
+            playingAudioCount: playingAudios.length,
+            hasPlayingMedia: hasPlayingMedia,
+            trackedElementsCount: Array.from(document.querySelectorAll('video, audio')).filter(el => trackedElements.has(el)).length
+          };
+          
+          contentDebugLog('MEDIA_CHECK', 'Media check requested', {
+            response: response,
+            url: window.location.href,
+            documentReady: document.readyState
           });
+          
+          sendResponse(response);
+          return true;
+          
+        case 'GET_CONTENT_DIAGNOSTICS':
+          const diagnostics = getContentDiagnosticInfo();
+          contentDebugLog('DIAGNOSTICS', 'Content diagnostics requested', diagnostics);
+          sendResponse(diagnostics);
           return true;
           
         default:

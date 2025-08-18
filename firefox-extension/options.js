@@ -47,6 +47,22 @@ async function syncSet(obj) {
   } catch (_) {}
 }
 
+async function syncRemove(keys) {
+  try {
+    if (typeof browser !== 'undefined' && browser.storage?.sync?.remove) {
+      return await browser.storage.sync.remove(keys);
+    }
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync?.remove) {
+      return await new Promise((resolve, reject) => {
+        chrome.storage.sync.remove(keys, () => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else resolve();
+        });
+      });
+    }
+  } catch (_) {}
+}
+
 async function localGet(keys) {
   try {
     if (typeof browser !== 'undefined' && browser.storage?.local?.get) {
@@ -95,6 +111,101 @@ async function localRemove(keys) {
     }
   } catch (_) {}
 }
+
+/**
+ * Enhanced storage manager with cross-browser sync storage for options page
+ * Both Chrome and Firefox: Uses sync storage for cross-device sync
+ * Fallback: Uses local storage if sync fails
+ */
+const OptionsStorageManager = {
+  /**
+   * Determine if we're running in Firefox
+   */
+  isFirefox() {
+    return typeof browser !== 'undefined' && browser.runtime;
+  },
+
+  /**
+   * Get settings with sync storage and local fallback
+   */
+  async get(keys) {
+    try {
+      // Try sync storage first (both Chrome and Firefox)
+      let result = await syncGet(keys);
+      
+      if (this.isFirefox()) {
+        console.log('OneTab Media Options Firefox: Settings loaded from sync storage');
+      } else {
+        console.log('OneTab Media Options Chrome: Settings loaded from sync storage');
+      }
+      
+      // If sync storage is empty, try local storage fallback
+      if (!result || Object.keys(result).length === 0) {
+        console.log('OneTab Media Options: Sync storage empty, trying local storage fallback');
+        result = await localGet(keys);
+      }
+      
+      return result || {};
+    } catch (error) {
+      console.warn('OneTab Media Options: Sync storage failed, trying local fallback:', error);
+      try {
+        return await localGet(keys) || {};
+      } catch (localError) {
+        console.error('OneTab Media Options: All storage methods failed:', localError);
+        return {};
+      }
+    }
+  },
+
+  /**
+   * Set settings to sync storage with local backup
+   */
+  async set(items) {
+    try {
+      // Save to sync storage first (primary for both browsers)
+      await syncSet(items);
+      
+      if (this.isFirefox()) {
+        console.log('OneTab Media Options Firefox: Settings saved to sync storage');
+      } else {
+        console.log('OneTab Media Options Chrome: Settings saved to sync storage');
+      }
+      
+      // Also save to local storage as backup for both browsers
+      try {
+        await localSet(items);
+        console.log('OneTab Media Options: Settings backed up to local storage');
+      } catch (localError) {
+        console.warn('OneTab Media Options: Local storage backup failed:', localError);
+      }
+      
+      return true;
+    } catch (error) {
+      console.warn('OneTab Media Options: Sync storage failed, using local storage:', error);
+      try {
+        await localSet(items);
+        console.log('OneTab Media Options: Settings saved to local storage only');
+        return true;
+      } catch (localError) {
+        console.error('OneTab Media Options: All storage methods failed:', localError);
+        return false;
+      }
+    }
+  },
+
+  /**
+   * Remove items from both sync and local storage
+   */
+  async remove(keys) {
+    try {
+      await syncRemove(keys);
+      await localRemove(keys);
+      console.log('OneTab Media Options: Settings removed from storage');
+    } catch (error) {
+      console.warn('OneTab Media Options: Storage remove failed:', error);
+    }
+  }
+};
 
 function logOptions(...args) {
   try { console.log('[UME Options]', ...args); } catch (_) {}
@@ -280,8 +391,8 @@ function applyTheme(theme, toggleEl, labelEl) {
  */
 async function ensureDefaultsSet() {
   try {
-    const keys = [...Object.keys(defaultSettings), 'settingsInitialized'];
-    const result = await syncGet(keys) || {};
+    const keys = [...Object.keys(defaultSettings), 'settingsInitialized', 'settingsVersion'];
+    const result = await OptionsStorageManager.get(keys) || {};
     
     // Check if this is a fresh install (no settings exist)
     const isFreshInstall = Object.keys(result).length === 0;
@@ -289,8 +400,19 @@ async function ensureDefaultsSet() {
     const alreadyInitialized = result.settingsInitialized === true;
 
     if (isFreshInstall && !alreadyInitialized) {
-      console.log('OneTab Media: Setting up defaults for fresh install');
-      await syncSet({ ...defaultSettings, settingsInitialized: true });
+      console.log('OneTab Media Options: Setting up defaults for fresh install with enhanced persistence');
+      const success = await OptionsStorageManager.set({ 
+        ...defaultSettings, 
+        settingsInitialized: true,
+        settingsVersion: '4.0',
+        installDate: new Date().toISOString()
+      });
+      
+      if (success) {
+        console.log('OneTab Media Options: Default settings applied successfully');
+      } else {
+        console.error('OneTab Media Options: Failed to save default settings');
+      }
     } else {
       // Ensure any missing settings are set to defaults
       const updates = {};
@@ -299,11 +421,18 @@ async function ensureDefaultsSet() {
           updates[key] = defaultValue;
         }
       }
+      
+      // Update settings version if needed
+      if (!result.settingsVersion || result.settingsVersion !== '4.0') {
+        updates.settingsVersion = '4.0';
+        updates.lastUpdated = new Date().toISOString();
+      }
+      
       if (!alreadyInitialized) updates.settingsInitialized = true;
       
       if (Object.keys(updates).length > 0) {
-        console.log('OneTab Media: Adding missing default settings:', updates);
-        await syncSet(updates);
+        console.log('OneTab Media Options: Adding missing default settings:', updates);
+        await OptionsStorageManager.set(updates);
       }
     }
     
@@ -390,7 +519,7 @@ function setupEventListeners() {
 
 async function loadSettings() {
   try {
-    const result = await syncGet(Object.keys(defaultSettings)) || {};
+    const result = await OptionsStorageManager.get(Object.keys(defaultSettings)) || {};
     currentSettings = { ...defaultSettings, ...result };
     
     // Load general settings
@@ -597,13 +726,16 @@ async function saveSettings() {
     settings.volumeStep = currentSettings.volumeStep || 0.1;
     settings.markers = currentSettings.markers || {};
     
-    // Save to storage
-    await browserAPI.storage.sync.set(settings);
+    // Save to storage with enhanced persistence
+    const success = await OptionsStorageManager.set(settings);
     
-    // Update current settings
-    currentSettings = settings;
-    
-    showStatus('Settings saved successfully and synced across devices!', 'success', 2000);
+    if (success) {
+      // Update current settings
+      currentSettings = settings;
+      showStatus('Settings saved successfully and synced across devices (Chrome & Firefox)!', 'success', 2000);
+    } else {
+      showStatus('Settings saved with limited persistence (storage issues detected)', 'warning', 3000);
+    }
     
     // Notify content scripts of settings change
     broadcastSettingsUpdate(settings);
